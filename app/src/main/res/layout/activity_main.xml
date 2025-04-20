@@ -141,6 +141,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
                 app:layout_constraintTop_toBottomOf="@+id/cardIncomeExpense">
@@ -189,6 +192,15 @@
                         android:layout_marginTop="8dp"
                         android:text="@string/budget_info"
                         android:textSize="14sp" />
+                    
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/set_budget"
+                        android:textAlignment="center"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -226,8 +238,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="12dp"
-                    android:text="@string/backup_data"
-                    app:icon="@drawable/ic_backup"
+                    android:text="@string/set_budget"
+                    app:icon="@drawable/ic_money"
                     app:iconGravity="textStart" />
             </LinearLayout>
 

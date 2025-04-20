@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BossFinance</string>
     <string name="app_logo">Boss Finance logo</string>
@@ -60,4 +61,22 @@
     <string name="next_month">Next Month</string>
     <string name="no_expense_data">No expense data for this month</string>
     <string name="other_category">Other</string>
+    
+    <!-- Budget Setup Strings -->
+    <string name="budget_setup">Budget Setup</string>
+    <string name="budget_setup_title">Set Your Monthly Budget</string>
+    <string name="budget_amount">Budget Amount</string>
+    <string name="budget_amount_description">Set the maximum amount you plan to spend each month.</string>
+    <string name="enter_budget_amount">Enter budget amount</string>
+    <string name="select_currency">Select Currency</string>
+    <string name="notifications">Notifications</string>
+    <string name="enable_budget_notifications">Enable budget alert notifications</string>
+    <string name="notification_threshold">Notification Threshold</string>
+    <string name="threshold_description">You\'ll receive a notification when your spending reaches this percentage of your budget.</string>
+    <string name="save_budget">Save Budget</string>
+    <string name="budget_saved">Budget settings saved successfully</string>
+    <string name="please_enter_valid_amount">Please enter a valid budget amount</string>
+    <string name="budget_alert_title">Budget Alert</string>
+    <string name="budget_alert_message">You\'ve reached %1$d%% of your monthly budget. Current spending: %2$s of %3$s</string>
+    <string name="set_budget">Set Budget</string>
 </resources>

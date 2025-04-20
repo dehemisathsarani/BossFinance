@@ -1,11 +1,18 @@
 package com.example.bossfinance
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
 import com.example.bossfinance.databinding.ActivityMainBinding
+import com.example.bossfinance.models.Budget
+import com.example.bossfinance.repository.BudgetRepository
 import com.example.bossfinance.repository.TransactionRepository
 import java.text.NumberFormat
 import java.util.Locale
@@ -13,7 +20,7 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val transactionRepository = TransactionRepository.getInstance()
-    private val budgetLimit = 1500.00 // This would typically come from user settings
+    private lateinit var budgetRepository: BudgetRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,7 +28,12 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        budgetRepository = BudgetRepository.getInstance(this)
+        
         setSupportActionBar(binding.toolbar)
+        
+        // Create notification channel for budget alerts
+        createNotificationChannel()
         
         setupClickListeners()
     }
@@ -30,6 +42,9 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Refresh dashboard data when returning to this screen
         updateDashboardData()
+        
+        // Check if budget threshold is exceeded and show notification if needed
+        checkBudgetThreshold()
     }
     
     private fun updateDashboardData() {
@@ -38,8 +53,12 @@ class MainActivity : AppCompatActivity() {
         val totalIncome = transactionRepository.getTotalIncome()
         val totalExpenses = transactionRepository.getTotalExpenses()
         
-        // Format currency values
-        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+        // Get budget from repository
+        val budget = budgetRepository.getBudget()
+        
+        // Format currency values with the user-selected currency
+        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        currencyFormatter.currency = budget.currency
         
         // Update current balance
         binding.tvCurrentBalance.text = currencyFormatter.format(currentBalance)
@@ -49,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvTotalExpenses.text = currencyFormatter.format(totalExpenses)
         
         // Update budget progress
-        val budgetPercentage = ((totalExpenses / budgetLimit) * 100).toInt().coerceAtMost(100)
+        val budgetPercentage = budgetRepository.getBudgetUsagePercentage(totalExpenses)
         binding.tvBudgetPercentage.text = "$budgetPercentage%"
         binding.budgetProgressBar.progress = budgetPercentage
         
@@ -64,7 +83,7 @@ class MainActivity : AppCompatActivity() {
         // Update budget info text
         binding.tvBudgetInfo.text = getString(R.string.budget_info)
             .replace("$0 spent", currencyFormatter.format(totalExpenses) + " spent")
-            .replace("$0 monthly budget", currencyFormatter.format(budgetLimit) + " monthly budget")
+            .replace("$0 monthly budget", currencyFormatter.format(budget.amount) + " monthly budget")
     }
     
     private fun setupClickListeners() {
@@ -81,13 +100,76 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.btnBackupData.setOnClickListener {
-            // TODO: Implement Backup Data functionality
-            Toast.makeText(this, "Backup Data clicked", Toast.LENGTH_SHORT).show()
+            // Navigate to Budget Setup screen
+            val intent = Intent(this, BudgetSetupActivity::class.java)
+            startActivity(intent)
         }
         
         binding.fabQuickAdd.setOnClickListener {
             val intent = Intent(this, TransactionEditActivity::class.java)
             startActivity(intent)
         }
+        
+        // Add click listener to budget progress section to navigate to budget setup
+        binding.budgetProgressBar.setOnClickListener {
+            val intent = Intent(this, BudgetSetupActivity::class.java)
+            startActivity(intent)
+        }
+        
+        binding.tvBudgetPercentage.setOnClickListener {
+            val intent = Intent(this, BudgetSetupActivity::class.java)
+            startActivity(intent)
+        }
+    }
+    
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = getString(R.string.budget_alert_title)
+            val descriptionText = getString(R.string.budget_alert_message, 0, "$0", "$0")
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+            // Register the channel with the system
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    
+    private fun checkBudgetThreshold() {
+        val budget = budgetRepository.getBudget()
+        val totalExpenses = transactionRepository.getTotalExpenses()
+        
+        // Check if notification is enabled and threshold is exceeded
+        if (budget.notificationEnabled && budgetRepository.isThresholdExceeded(totalExpenses)) {
+            showBudgetAlert(budget, totalExpenses)
+        }
+    }
+    
+    private fun showBudgetAlert(budget: Budget, expenses: Double) {
+        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        currencyFormatter.currency = budget.currency
+        
+        val percentage = budgetRepository.getBudgetUsagePercentage(expenses)
+        val expensesFormatted = currencyFormatter.format(expenses)
+        val budgetFormatted = currencyFormatter.format(budget.amount)
+        
+        // Show notification
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_money)
+            .setContentTitle(getString(R.string.budget_alert_title))
+            .setContentText(getString(R.string.budget_alert_message, percentage, expensesFormatted, budgetFormatted))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+    
+    companion object {
+        private const val CHANNEL_ID = "budget_alert_channel"
+        private const val NOTIFICATION_ID = 1001
     }
 }
