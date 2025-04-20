@@ -41,6 +41,13 @@
             android:exported="false"
             android:label="@string/add_transaction"
             android:parentActivityName=".TransactionListActivity" />
+            
+        <!-- Spending Analysis Activity -->
+        <activity
+            android:name=".SpendingAnalysisActivity"
+            android:exported="false"
+            android:label="@string/spending_analysis"
+            android:parentActivityName=".MainActivity" />
     </application>
 
 </manifest>

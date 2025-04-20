@@ -51,6 +51,9 @@ dependencies {
     // Add ViewPager2 dependency
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     
+    // Chart library for visualization
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

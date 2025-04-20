@@ -75,8 +75,9 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.btnViewReports.setOnClickListener {
-            // TODO: Implement View Reports screen
-            Toast.makeText(this, "View Reports clicked", Toast.LENGTH_SHORT).show()
+            // Navigate to Spending Analysis screen
+            val intent = Intent(this, SpendingAnalysisActivity::class.java)
+            startActivity(intent)
         }
         
         binding.btnBackupData.setOnClickListener {
