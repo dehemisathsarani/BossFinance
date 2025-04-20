@@ -20,8 +20,10 @@ import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.PercentFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.utils.ColorTemplate
 import com.google.android.material.tabs.TabLayout
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -224,33 +226,68 @@ class SpendingAnalysisActivity : AppCompatActivity() {
     }
     
     private fun updateBarChart() {
+        // Check if there's data before attempting to create the chart
+        if (categorySpending.isEmpty()) {
+            binding.barChart.visibility = View.GONE
+            binding.tvNoDataMessage.visibility = View.VISIBLE
+            return
+        }
+
         // Create entries for bar chart
         val entries = mutableListOf<BarEntry>()
         val categoryLabels = mutableListOf<String>()
         
-        // Sort categories by amount
+        // Limit to top categories and group others like in the pie chart
         val sortedCategories = categorySpending.entries.sortedByDescending { it.value }
+        val topCategories = sortedCategories.take(5)
+        val otherAmount = sortedCategories.drop(5).sumOf { it.value }
         
-        // Add each category
-        sortedCategories.forEachIndexed { index, (category, amount) ->
+        // Add top categories
+        topCategories.forEachIndexed { index, (category, amount) ->
             entries.add(BarEntry(index.toFloat(), amount.toFloat()))
             categoryLabels.add(category)
         }
         
+        // Add "Other" category if needed
+        if (otherAmount > 0) {
+            entries.add(BarEntry(entries.size.toFloat(), otherAmount.toFloat()))
+            categoryLabels.add(getString(R.string.other_category))
+        }
+        
         // Configure bar data set
         val dataSet = BarDataSet(entries, getString(R.string.category_spending))
-        dataSet.colors = chartColors
-        dataSet.valueTextSize = 10f
+        dataSet.colors = chartColors.take(entries.size).toList()
+        dataSet.valueTextSize = 10f  // Smaller text size to prevent overlap
+        dataSet.valueTextColor = Color.BLACK
+        
+        // Format the values to currency
+        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+        dataSet.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                // Simplify currency display for better readability
+                if (value >= 1000) {
+                    return currencyFormatter.format(value).replace(".00", "")
+                }
+                return currencyFormatter.format(value)
+            }
+        }
         
         // Configure bar data
         val data = BarData(dataSet)
-        data.barWidth = 0.6f
+        data.barWidth = 0.5f  // Make bars slightly thinner
         
         // Configure bar chart
         with(binding.barChart) {
             this.data = data
             description.isEnabled = false
-            legend.isEnabled = false
+            
+            // Enable legend for consistency with pie chart
+            legend.isEnabled = true
+            legend.orientation = Legend.LegendOrientation.VERTICAL
+            legend.verticalAlignment = Legend.LegendVerticalAlignment.CENTER
+            legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
+            legend.setDrawInside(false)
+            legend.textSize = 12f
             
             // X-axis setup
             xAxis.valueFormatter = IndexAxisValueFormatter(categoryLabels)
@@ -260,15 +297,38 @@ class SpendingAnalysisActivity : AppCompatActivity() {
             xAxis.setDrawGridLines(false)
             xAxis.labelRotationAngle = 45f
             xAxis.labelCount = categoryLabels.size
+            xAxis.textSize = 11f  // Slightly smaller text
             
             // Y-axis setup
             axisLeft.setDrawGridLines(true)
+            axisLeft.axisMinimum = 0f
+            axisLeft.textSize = 11f
             axisRight.isEnabled = false
+            
+            // Ensure proper margins for the chart content
+            setExtraOffsets(15f, 10f, 30f, 20f)
+            
+            // Make sure we have visible height
+            minimumHeight = 500
             
             // Other settings
             setFitBars(true)
-            animateY(1000)
+            animateY(1500, Easing.EaseInOutQuad)
+            
+            // Improve touch interactions
+            isDoubleTapToZoomEnabled = false
+            setPinchZoom(false)
+            
+            // Force redraw
+            notifyDataSetChanged()
             invalidate()
+        }
+        
+        // Ensure chart is visible if in the bar chart tab
+        if (binding.chartTypeTabs.selectedTabPosition == 1) {
+            binding.barChart.visibility = View.VISIBLE
+            binding.pieChart.visibility = View.GONE
+            binding.tvNoDataMessage.visibility = View.GONE
         }
     }
     
