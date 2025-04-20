@@ -1,3 +1,20 @@
 <resources>
     <string name="app_name">BossFinance</string>
+    <string name="app_logo">Boss Finance logo</string>
+    
+    <!-- Onboarding Strings -->
+    <string name="onboarding_image">Onboarding illustration</string>
+    <string name="skip">Skip</string>
+    <string name="next">Next</string>
+    <string name="get_started">Get Started</string>
+    
+    <!-- Onboarding Screen 1 -->
+    <string name="onboarding_title_1">Track Your Finances Smartly</string>
+    <string name="onboarding_desc_1">Easily record income, expenses, and savings on the go.</string>
+    
+    <!-- Onboarding Screens 2 and 3 -->
+    <string name="onboarding_title_2">Analyze Your Spending</string>
+    <string name="onboarding_desc_2">Categorized insights help you manage better.</string>
+    <string name="onboarding_title_3">Stay Within Budget</string>
+    <string name="onboarding_desc_3">Monthly budget alerts keep your spending on track.</string>
 </resources>

@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.BossFinance" parent="Base.Theme.BossFinance" />
+    
+    <!-- Theme for splash screen without ActionBar and with fullscreen -->
+    <style name="Theme.BossFinance.NoActionBar" parent="Theme.BossFinance">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
 </resources>
