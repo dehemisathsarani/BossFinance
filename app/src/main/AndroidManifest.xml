@@ -29,6 +29,18 @@
             android:name=".MainActivity"
             android:exported="false">
         </activity>
+        
+        <!-- Transaction Management Activities -->
+        <activity
+            android:name=".TransactionListActivity"
+            android:exported="false"
+            android:label="@string/transactions"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".TransactionEditActivity"
+            android:exported="false"
+            android:label="@string/add_transaction"
+            android:parentActivityName=".TransactionListActivity" />
     </application>
 
 </manifest>
