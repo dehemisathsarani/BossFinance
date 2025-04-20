@@ -17,4 +17,15 @@
     <string name="onboarding_desc_2">Categorized insights help you manage better.</string>
     <string name="onboarding_title_3">Stay Within Budget</string>
     <string name="onboarding_desc_3">Monthly budget alerts keep your spending on track.</string>
+    
+    <!-- Dashboard Strings -->
+    <string name="current_balance">Current Balance</string>
+    <string name="total_income">Total Income</string>
+    <string name="total_expenses">Total Expenses</string>
+    <string name="budget_progress">Budget Progress</string>
+    <string name="budget_info">$0 spent of $0 monthly budget</string>
+    <string name="add_transaction">Add Transaction</string>
+    <string name="view_reports">View Reports</string>
+    <string name="backup_data">Backup Data</string>
+    <string name="quick_add_transaction">Quick add transaction</string>
 </resources>
