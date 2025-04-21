@@ -232,6 +232,16 @@
                     android:text="@string/view_reports"
                     app:icon="@drawable/ic_view_reports"
                     app:iconGravity="textStart" />
+                
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSetBudget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:padding="12dp"
+                    android:text="@string/set_budget"
+                    app:icon="@drawable/ic_money"
+                    app:iconGravity="textStart" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnBackupData"

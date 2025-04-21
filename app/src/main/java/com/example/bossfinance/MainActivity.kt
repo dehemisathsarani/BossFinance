@@ -101,6 +101,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         
+        binding.btnSetBudget.setOnClickListener {
+            // Navigate to Budget Setup screen
+            val intent = Intent(this, BudgetSetupActivity::class.java)
+            startActivity(intent)
+        }
+        
         binding.btnBackupData.setOnClickListener {
             // Navigate to Backup & Restore screen
             val intent = Intent(this, BackupRestoreActivity::class.java)
