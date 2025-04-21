@@ -238,8 +238,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="12dp"
-                    android:text="@string/set_budget"
-                    app:icon="@drawable/ic_money"
+                    android:text="@string/backup_restore"
+                    app:icon="@drawable/ic_backup"
                     app:iconGravity="textStart" />
             </LinearLayout>
 

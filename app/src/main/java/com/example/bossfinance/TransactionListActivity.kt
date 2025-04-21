@@ -14,7 +14,7 @@ import com.example.bossfinance.repository.TransactionRepository
 class TransactionListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTransactionListBinding
     private lateinit var transactionAdapter: TransactionAdapter
-    private val transactionRepository = TransactionRepository.getInstance()
+    private lateinit var transactionRepository: TransactionRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

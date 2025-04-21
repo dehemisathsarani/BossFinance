@@ -56,6 +56,12 @@
             android:exported="false"
             android:label="@string/budget_setup"
             android:parentActivityName=".MainActivity" />
+            
+        <activity
+            android:name=".BackupRestoreActivity"
+            android:exported="false"
+            android:label="@string/backup_restore"
+            android:parentActivityName=".MainActivity" />
     </application>
 
 </manifest>

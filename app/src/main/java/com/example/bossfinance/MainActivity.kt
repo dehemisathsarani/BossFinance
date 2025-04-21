@@ -19,7 +19,7 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private val transactionRepository = TransactionRepository.getInstance()
+    private lateinit var transactionRepository: TransactionRepository
     private lateinit var budgetRepository: BudgetRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         
         budgetRepository = BudgetRepository.getInstance(this)
+        transactionRepository = TransactionRepository.getInstance(this)
         
         setSupportActionBar(binding.toolbar)
         
@@ -89,7 +90,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         // Set up click listeners for the buttons
         binding.btnAddTransaction.setOnClickListener {
-            val intent = Intent(this, TransactionListActivity::class.java)
+            // Navigate directly to transaction edit screen for adding a new transaction
+            val intent = Intent(this, TransactionEditActivity::class.java)
             startActivity(intent)
         }
         
@@ -100,8 +102,8 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.btnBackupData.setOnClickListener {
-            // Navigate to Budget Setup screen
-            val intent = Intent(this, BudgetSetupActivity::class.java)
+            // Navigate to Backup & Restore screen
+            val intent = Intent(this, BackupRestoreActivity::class.java)
             startActivity(intent)
         }
         

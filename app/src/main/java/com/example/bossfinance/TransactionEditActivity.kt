@@ -8,7 +8,6 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import com.example.bossfinance.databinding.ActivityTransactionEditBinding
 import com.example.bossfinance.models.Transaction
 import com.example.bossfinance.models.TransactionCategories
@@ -21,29 +20,29 @@ import java.util.Locale
 
 class TransactionEditActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTransactionEditBinding
-    private val transactionRepository = TransactionRepository.getInstance()
+    private lateinit var transactionRepository: TransactionRepository
     private var transactionDate = Calendar.getInstance()
     private var isIncome = true
     private var transactionId: String? = null
     private var isEditMode = false
-    private lateinit var toolbar: Toolbar
     
     private val dateFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_transaction_edit)
         
+        // Initialize binding and set content view
         binding = ActivityTransactionEditBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        // Initialize repository
+        transactionRepository = TransactionRepository.getInstance(applicationContext)
         
         // Check if we're editing an existing transaction
         transactionId = intent.getStringExtra(EXTRA_TRANSACTION_ID)
         isEditMode = transactionId != null
         
+        // Setup UI components
         setupToolbar()
         setupTabLayout()
         setupDatePicker()
@@ -116,6 +115,15 @@ class TransactionEditActivity : AppCompatActivity() {
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCategory.adapter = adapter
+        
+        // If not editing an existing transaction, select the last used category for this type
+        if (!isEditMode) {
+            val lastUsedCategory = transactionRepository.getLastUsedCategory(isIncome)
+            val position = categories.indexOf(lastUsedCategory)
+            if (position != -1) {
+                binding.spinnerCategory.setSelection(position)
+            }
+        }
     }
     
     private fun setupSaveButton() {
@@ -192,36 +200,57 @@ class TransactionEditActivity : AppCompatActivity() {
     }
     
     private fun saveTransaction() {
-        val title = binding.etTransactionTitle.text.toString()
-        val amount = binding.etAmount.text.toString().toDouble()
-        val category = binding.spinnerCategory.selectedItem as String
-        val date = transactionDate.time
+        val title = binding.etTransactionTitle.text.toString().trim()
         
-        if (isEditMode && transactionId != null) {
-            // Update existing transaction
-            val transaction = Transaction(
-                id = transactionId!!,
-                title = title,
-                amount = amount,
-                category = category,
-                date = date,
-                isIncome = isIncome
-            )
-            transactionRepository.updateTransaction(transaction)
-        } else {
-            // Create new transaction
-            val transaction = Transaction(
-                title = title,
-                amount = amount,
-                category = category,
-                date = date,
-                isIncome = isIncome
-            )
-            transactionRepository.addTransaction(transaction)
+        // Parse the amount safely
+        val amountStr = binding.etAmount.text.toString()
+        val amount = try {
+            amountStr.toDouble()
+        } catch (e: NumberFormatException) {
+            // Show error and return early if amount can't be parsed
+            binding.amountInputLayout.error = getString(R.string.please_enter_valid_amount)
+            return
         }
         
-        Toast.makeText(this, getString(R.string.transaction_saved), Toast.LENGTH_SHORT).show()
-        finish()
+        // Make sure we have a valid category selected
+        val category = binding.spinnerCategory.selectedItem?.toString() ?: run {
+            Toast.makeText(this, getString(R.string.please_select_category), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val date = transactionDate.time
+        
+        try {
+            if (isEditMode && transactionId != null) {
+                // Update existing transaction
+                val transaction = Transaction(
+                    id = transactionId!!,
+                    title = title,
+                    amount = amount,
+                    category = category,
+                    date = date,
+                    isIncome = isIncome
+                )
+                transactionRepository.updateTransaction(transaction)
+                Toast.makeText(this, getString(R.string.transaction_saved), Toast.LENGTH_SHORT).show()
+            } else {
+                // Create new transaction
+                val transaction = Transaction(
+                    title = title,
+                    amount = amount,
+                    category = category,
+                    date = date,
+                    isIncome = isIncome
+                )
+                transactionRepository.addTransaction(transaction)
+                Toast.makeText(this, getString(R.string.transaction_saved), Toast.LENGTH_SHORT).show()
+            }
+            finish()
+        } catch (e: Exception) {
+            // Handle any unexpected errors during save
+            Toast.makeText(this, "Error saving transaction", Toast.LENGTH_LONG).show()
+            e.printStackTrace()
+        }
     }
     
     private fun showDeleteConfirmationDialog() {

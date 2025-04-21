@@ -79,4 +79,17 @@
     <string name="budget_alert_title">Budget Alert</string>
     <string name="budget_alert_message">You\'ve reached %1$d%% of your monthly budget. Current spending: %2$s of %3$s</string>
     <string name="set_budget">Set Budget</string>
+    
+    <!-- Backup and Restore Strings -->
+    <string name="backup_restore">Backup &amp; Restore</string>
+    <string name="export_data">Export Data</string>
+    <string name="import_data">Import Data</string>
+    <string name="export_data_description">Export all your transaction data to a file on your device for backup purposes.</string>
+    <string name="import_data_description">Import transaction data from a previously created backup file.</string>
+    <string name="export_success">Data exported successfully to: %1$s</string>
+    <string name="export_error">Failed to export data: %1$s</string>
+    <string name="import_success">Data imported successfully</string>
+    <string name="import_error">Failed to import data: %1$s</string>
+    <string name="confirm_import">Importing data will replace all existing transactions. Continue?</string>
+    <string name="no_backup_found">No backup file found</string>
 </resources>

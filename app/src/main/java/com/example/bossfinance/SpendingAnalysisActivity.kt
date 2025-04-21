@@ -31,7 +31,7 @@ import java.util.Locale
 
 class SpendingAnalysisActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySpendingAnalysisBinding
-    private val transactionRepository = TransactionRepository.getInstance()
+    private lateinit var transactionRepository: TransactionRepository
     private val calendar = Calendar.getInstance()
     private val monthFormatter = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
     
@@ -51,6 +51,9 @@ class SpendingAnalysisActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySpendingAnalysisBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Initialize repository with context
+        transactionRepository = TransactionRepository.getInstance(this)
         
         // Setup toolbar
         setSupportActionBar(binding.toolbar)
