@@ -71,6 +71,12 @@
             android:label="@string/notifications_settings"
             android:parentActivityName=".MainActivity" />
             
+        <activity
+            android:name=".TransactionHistoryActivity"
+            android:exported="false"
+            android:label="@string/transaction_history"
+            android:parentActivityName=".MainActivity" />
+            
         <!-- Receivers -->
         <receiver 
             android:name=".receivers.DailyReminderReceiver"

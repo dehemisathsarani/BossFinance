@@ -164,6 +164,16 @@ class TransactionRepository private constructor(context: Context) {
         }.sortedByDescending { it.date }
     }
     
+    // Get income transactions
+    fun getIncomeTransactions(): List<Transaction> {
+        return transactions.filter { it.isIncome }.sortedByDescending { it.date }
+    }
+    
+    // Get expense transactions
+    fun getExpenseTransactions(): List<Transaction> {
+        return transactions.filter { !it.isIncome }.sortedByDescending { it.date }
+    }
+    
     companion object {
         private const val PREFS_NAME = "boss_finance_transaction_prefs"
         private const val KEY_TRANSACTIONS = "transactions"

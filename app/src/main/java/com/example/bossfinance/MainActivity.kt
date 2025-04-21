@@ -110,6 +110,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         
+        binding.btnViewTransactionHistory.setOnClickListener {
+            // Navigate to Transaction History screen
+            val intent = Intent(this, TransactionHistoryActivity::class.java)
+            startActivity(intent)
+        }
+        
         binding.btnNotifications.setOnClickListener {
             // Navigate to Notifications settings screen
             val intent = Intent(this, NotificationsActivity::class.java)
