@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -62,6 +64,21 @@
             android:exported="false"
             android:label="@string/backup_restore"
             android:parentActivityName=".MainActivity" />
+            
+        <activity
+            android:name=".NotificationsActivity"
+            android:exported="false"
+            android:label="@string/notifications_settings"
+            android:parentActivityName=".MainActivity" />
+            
+        <!-- Receivers -->
+        <receiver 
+            android:name=".receivers.DailyReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

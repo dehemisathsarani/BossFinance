@@ -92,4 +92,19 @@
     <string name="import_error">Failed to import data: %1$s</string>
     <string name="confirm_import">Importing data will replace all existing transactions. Continue?</string>
     <string name="no_backup_found">No backup file found</string>
+    
+    <!-- Notifications Strings -->
+    <string name="notifications_settings">Notifications</string>
+    <string name="budget_alerts">Budget Alerts</string>
+    <string name="budget_alerts_description">Get notified when your spending reaches a certain percentage of your monthly budget.</string>
+    <string name="daily_reminders">Daily Reminders</string>
+    <string name="daily_reminders_description">Receive a daily reminder to log your expenses. This helps build a consistent habit of tracking your finances.</string>
+    <string name="enable_daily_reminders">Enable daily expense logging reminders</string>
+    <string name="reminder_time">Reminder Time</string>
+    <string name="daily_reminders_note">Daily reminders help you build a habit of logging expenses regularly for better financial tracking.</string>
+    <string name="save_settings">Save Settings</string>
+    <string name="settings_saved">Settings saved successfully</string>
+    <string name="daily_reminder_title">Expense Logging Reminder</string>
+    <string name="daily_reminder_message">Don\'t forget to log today\'s expenses in BossFinance</string>
+    <string name="select_time">Select Time</string>
 </resources>

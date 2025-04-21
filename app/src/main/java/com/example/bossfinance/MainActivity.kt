@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.example.bossfinance.databinding.ActivityMainBinding
 import com.example.bossfinance.models.Budget
 import com.example.bossfinance.repository.BudgetRepository
+import com.example.bossfinance.repository.NotificationRepository
 import com.example.bossfinance.repository.TransactionRepository
 import java.text.NumberFormat
 import java.util.Locale
@@ -21,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var transactionRepository: TransactionRepository
     private lateinit var budgetRepository: BudgetRepository
+    private lateinit var notificationRepository: NotificationRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,11 +32,12 @@ class MainActivity : AppCompatActivity() {
         
         budgetRepository = BudgetRepository.getInstance(this)
         transactionRepository = TransactionRepository.getInstance(this)
+        notificationRepository = NotificationRepository.getInstance(this)
         
         setSupportActionBar(binding.toolbar)
         
-        // Create notification channel for budget alerts
-        createNotificationChannel()
+        // Create notification channels for budget alerts and daily reminders
+        createNotificationChannels()
         
         setupClickListeners()
     }
@@ -107,6 +110,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         
+        binding.btnNotifications.setOnClickListener {
+            // Navigate to Notifications settings screen
+            val intent = Intent(this, NotificationsActivity::class.java)
+            startActivity(intent)
+        }
+        
         binding.btnBackupData.setOnClickListener {
             // Navigate to Backup & Restore screen
             val intent = Intent(this, BackupRestoreActivity::class.java)
@@ -130,28 +139,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = getString(R.string.budget_alert_title)
-            val descriptionText = getString(R.string.budget_alert_message, 0, "$0", "$0")
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
+            // Budget alert channel
+            val budgetAlertName = getString(R.string.budget_alert_title)
+            val budgetAlertDesc = getString(R.string.budget_alert_message, 0, "$0", "$0")
+            val budgetAlertChannel = NotificationChannel(
+                BUDGET_CHANNEL_ID, 
+                budgetAlertName, 
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = budgetAlertDesc
             }
-            // Register the channel with the system
+            
+            // Daily reminder channel
+            val reminderName = getString(R.string.daily_reminder_title)
+            val reminderDesc = getString(R.string.daily_reminder_message)
+            val reminderChannel = NotificationChannel(
+                REMINDER_CHANNEL_ID, 
+                reminderName, 
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = reminderDesc
+            }
+            
+            // Register channels with the system
             val notificationManager: NotificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(budgetAlertChannel)
+            notificationManager.createNotificationChannel(reminderChannel)
         }
     }
     
     private fun checkBudgetThreshold() {
         val budget = budgetRepository.getBudget()
         val totalExpenses = transactionRepository.getTotalExpenses()
+        val notificationSettings = notificationRepository.getNotificationSettings()
         
-        // Check if notification is enabled and threshold is exceeded
-        if (budget.notificationEnabled && budgetRepository.isThresholdExceeded(totalExpenses)) {
-            showBudgetAlert(budget, totalExpenses)
+        // Check if budget alerts are enabled and threshold is exceeded
+        if (notificationSettings.budgetAlertsEnabled) {
+            // Use threshold from notification settings
+            val percentage = budgetRepository.getBudgetUsagePercentage(totalExpenses)
+            if (percentage >= notificationSettings.budgetAlertThreshold) {
+                showBudgetAlert(budget, totalExpenses)
+            }
         }
     }
     
@@ -165,19 +196,20 @@ class MainActivity : AppCompatActivity() {
         
         // Show notification
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_money)
+        val notification = NotificationCompat.Builder(this, BUDGET_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(getString(R.string.budget_alert_title))
             .setContentText(getString(R.string.budget_alert_message, percentage, expensesFormatted, budgetFormatted))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
         
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        notificationManager.notify(BUDGET_NOTIFICATION_ID, notification)
     }
     
     companion object {
-        private const val CHANNEL_ID = "budget_alert_channel"
-        private const val NOTIFICATION_ID = 1001
+        private const val BUDGET_CHANNEL_ID = "budget_alert_channel"
+        private const val REMINDER_CHANNEL_ID = "daily_reminder_channel"
+        private const val BUDGET_NOTIFICATION_ID = 1001
     }
 }
