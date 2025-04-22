@@ -34,7 +34,7 @@
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipAll"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
@@ -42,14 +42,14 @@
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipIncome"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/income" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipExpense"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/expense" />

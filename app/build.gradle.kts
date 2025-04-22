@@ -48,11 +48,17 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     
+    // Material Components explicitly specified version
+    implementation("com.google.android.material:material:1.11.0")
+    
     // Add ViewPager2 dependency
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     
     // Chart library for visualization
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    
+    // Preferences library for settings
+    implementation("androidx.preference:preference-ktx:1.2.1")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

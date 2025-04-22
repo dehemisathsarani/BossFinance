@@ -149,7 +149,7 @@
                 android:layout_marginTop="8dp"
                 android:text="8:00 PM"
                 android:textAllCaps="false"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
             <TextView
                 android:layout_width="match_parent"

@@ -78,6 +78,14 @@ class BudgetRepository private constructor(context: Context) {
         return usagePercentage >= budget.notificationThreshold
     }
     
+    /**
+     * Get monthly budget amount
+     * This method is used by the dashboard to get just the amount
+     */
+    fun getMonthlyBudget(): Double {
+        return getBudget().amount
+    }
+    
     companion object {
         private const val PREFS_NAME = "boss_finance_budget_prefs"
         private const val KEY_BUDGET_AMOUNT = "budget_amount"

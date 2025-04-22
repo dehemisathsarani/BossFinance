@@ -174,6 +174,30 @@ class TransactionRepository private constructor(context: Context) {
         return transactions.filter { !it.isIncome }.sortedByDescending { it.date }
     }
     
+    /**
+     * Get category-wise spending data for the given date range
+     * Returns a list of pairs where each pair contains (category, amount)
+     */
+    fun getCategorySpending(startDate: Date, endDate: Date): List<Pair<String, Double>> {
+        // Get all expense transactions in the date range
+        val expenseTransactions = transactions.filter { 
+            !it.isIncome && it.date >= startDate && it.date <= endDate 
+        }
+        
+        // Group by category and sum the amounts
+        val categoryMap = mutableMapOf<String, Double>()
+        
+        expenseTransactions.forEach { transaction ->
+            val currentAmount = categoryMap.getOrDefault(transaction.category, 0.0)
+            categoryMap[transaction.category] = currentAmount + transaction.amount
+        }
+        
+        // Convert to list of pairs sorted by amount (descending)
+        return categoryMap.entries.map { 
+            Pair(it.key, it.value) 
+        }.sortedByDescending { it.second }
+    }
+    
     companion object {
         private const val PREFS_NAME = "boss_finance_transaction_prefs"
         private const val KEY_TRANSACTIONS = "transactions"
