@@ -5,6 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:minHeight="800dp"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -55,7 +56,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="76dp"
+        android:layout_marginBottom="120dp"
         android:contentDescription="@string/quick_add_transaction"
         app:srcCompat="@drawable/ic_add" />
 
