@@ -83,8 +83,10 @@ class MainActivity : AppCompatActivity() {
                     return@setOnItemSelectedListener false
                 }
                 R.id.navigation_reports -> {
-                    loadFragment(ReportsFragment())
-                    return@setOnItemSelectedListener true
+                    // Launch the SpendingAnalysisActivity directly, just like the "View Reports" button
+                    val intent = Intent(this, SpendingAnalysisActivity::class.java)
+                    startActivity(intent)
+                    return@setOnItemSelectedListener false
                 }
                 R.id.navigation_settings -> {
                     loadFragment(SettingsFragment())

@@ -6,14 +6,14 @@
         android:title="@string/dashboard" />
 
     <item
-        android:id="@+id/navigation_add"
-        android:icon="@drawable/ic_add"
-        android:title="@string/add" />
-
-    <item
         android:id="@+id/navigation_reports"
         android:icon="@drawable/ic_reports"
         android:title="@string/reports" />
+
+    <item
+        android:id="@+id/navigation_add"
+        android:icon="@drawable/ic_add"
+        android:title="@string/add" />
 
     <item
         android:id="@+id/navigation_history"
