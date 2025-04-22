@@ -1,221 +1,226 @@
 package com.example.bossfinance.ui.reports
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.bossfinance.databinding.FragmentReportsBinding
-import com.example.bossfinance.repository.TransactionRepository
+import com.example.bossfinance.R
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.Legend
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.utils.ColorTemplate
+import com.google.android.material.tabs.TabLayout
+import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
+import java.util.Locale
 
 class ReportsFragment : Fragment() {
 
-    private var _binding: FragmentReportsBinding? = null
-    private val binding get() = _binding!!
+    private lateinit var pieChart: PieChart
+    private lateinit var barChart: BarChart
+    private lateinit var chartContainer: ViewGroup
+    private lateinit var tabLayout: TabLayout
+    private lateinit var tvSelectedMonth: TextView
+    private val calendar = Calendar.getInstance()
+    private val dateFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
     
-    private lateinit var transactionRepository: TransactionRepository
-    private var selectedDate = Date() // Default to current date
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentReportsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    ): View? {
+        val root = inflater.inflate(R.layout.fragment_reports, container, false)
         
-        transactionRepository = TransactionRepository.getInstance(requireContext())
+        // Initialize views
+        tabLayout = root.findViewById(R.id.tabLayout)
+        tvSelectedMonth = root.findViewById(R.id.tvSelectedMonth)
+        chartContainer = root.findViewById(R.id.chartContainer)
         
-        setupDateSelector()
-        setupTabLayout()
-        setupCategoryList()
-        updateReports()
-    }
-    
-    private fun setupDateSelector() {
-        updateMonthYearDisplay()
+        // Create chart instances
+        createCharts()
         
-        binding.btnPreviousMonth.setOnClickListener {
-            // Navigate to previous month
-            val calendar = Calendar.getInstance()
-            calendar.time = selectedDate
+        // Setup date display
+        updateDateDisplay()
+        
+        // Setup previous/next month buttons
+        root.findViewById<View>(R.id.btnPreviousMonth).setOnClickListener {
             calendar.add(Calendar.MONTH, -1)
-            selectedDate = calendar.time
-            updateMonthYearDisplay()
-            updateReports()
+            updateDateDisplay()
+            updateChartData()
         }
         
-        binding.btnNextMonth.setOnClickListener {
-            // Navigate to next month
-            val calendar = Calendar.getInstance()
-            calendar.time = selectedDate
+        root.findViewById<View>(R.id.btnNextMonth).setOnClickListener {
             calendar.add(Calendar.MONTH, 1)
-            selectedDate = calendar.time
-            updateMonthYearDisplay()
-            updateReports()
+            updateDateDisplay()
+            updateChartData()
         }
-    }
-    
-    private fun updateMonthYearDisplay() {
-        binding.tvSelectedMonth.text = formatMonthYear(selectedDate)
-    }
-    
-    private fun formatMonthYear(date: Date): String {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        val month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, java.util.Locale.getDefault())
-        val year = calendar.get(Calendar.YEAR)
-        return "$month $year"
-    }
-    
-    private fun getFirstDayOfMonth(date: Date): Date {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.time
-    }
-    
-    private fun getLastDayOfMonth(date: Date): Date {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        return calendar.time
-    }
-    
-    private fun setupTabLayout() {
-        binding.tabLayout.addOnTabSelectedListener(object : 
-            com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
-                // Update chart type based on selected tab
-                updateChartType(tab?.position ?: 0)
+        
+        // Setup tab selection listener
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                tab?.position?.let { updateChartVisibility(it) }
             }
             
-            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
             
-            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+        
+        // Show pie chart by default
+        updateChartVisibility(0)
+        
+        return root
     }
     
-    private fun setupCategoryList() {
-        binding.categoryList.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = CategorySpendingAdapter(requireContext(), emptyList())
-        }
+    private fun createCharts() {
+        // Create pie chart
+        pieChart = PieChart(requireContext())
+        pieChart.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        setupPieChart(pieChart)
+        
+        // Create bar chart
+        barChart = BarChart(requireContext())
+        barChart.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        setupBarChart(barChart)
     }
     
-    private fun updateReports() {
-        val startDate = getFirstDayOfMonth(selectedDate)
-        val endDate = getLastDayOfMonth(selectedDate)
-        
-        // Get category-wise spending from repository
-        val categorySpending = transactionRepository.getCategorySpending(startDate, endDate)
-        
-        if (categorySpending.isEmpty()) {
-            binding.tvNoData.visibility = View.VISIBLE
-            binding.chartContainer.visibility = View.GONE
-        } else {
-            binding.tvNoData.visibility = View.GONE
-            binding.chartContainer.visibility = View.VISIBLE
-            
-            // Update chart based on selected type
-            updateChartWithData(categorySpending)
-            
-            // Update category list
-            (binding.categoryList.adapter as CategorySpendingAdapter).updateData(categorySpending)
-        }
+    private fun updateDateDisplay() {
+        tvSelectedMonth.text = dateFormat.format(calendar.time)
     }
     
-    private fun updateChartType(tabPosition: Int) {
-        // 0 = Pie Chart, 1 = Bar Chart
-        val chartType = if (tabPosition == 0) ChartType.PIE else ChartType.BAR
+    private fun updateChartVisibility(tabPosition: Int) {
+        // Remove all views from container
+        chartContainer.removeAllViews()
         
-        // Get data and update chart
-        val startDate = getFirstDayOfMonth(selectedDate)
-        val endDate = getLastDayOfMonth(selectedDate)
-        val categorySpending = transactionRepository.getCategorySpending(startDate, endDate)
-        
-        if (categorySpending.isNotEmpty()) {
-            updateChartWithData(categorySpending, chartType)
-        }
-    }
-    
-    private fun updateChartWithData(
-        categorySpending: List<Pair<String, Double>>,
-        chartType: ChartType = if (binding.tabLayout.selectedTabPosition == 0) ChartType.PIE else ChartType.BAR
-    ) {
-        // Here you would update the chart with the provided data
-        // This depends on which charting library you're using
-        // For example, MPAndroidChart, AnyChart, etc.
-        
-        // For this example, we'll just set a placeholder
-        // In a real implementation, you would create and update the actual chart
-        when (chartType) {
-            ChartType.PIE -> {
-                // Update pie chart with data
-                // Example: pieChart.setData(convertToPieEntries(categorySpending))
+        // Add selected chart
+        when (tabPosition) {
+            0 -> {
+                chartContainer.addView(pieChart)
+                loadPieChartData()
             }
-            ChartType.BAR -> {
-                // Update bar chart with data
-                // Example: barChart.setData(convertToBarEntries(categorySpending))
+            1 -> {
+                chartContainer.addView(barChart)
+                loadBarChartData()
             }
         }
     }
     
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    private fun updateChartData() {
+        when (tabLayout.selectedTabPosition) {
+            0 -> loadPieChartData()
+            1 -> loadBarChartData()
+        }
     }
     
-    enum class ChartType {
-        PIE, BAR
+    private fun setupPieChart(chart: PieChart) {
+        chart.setDrawHoleEnabled(true)
+        chart.setUsePercentValues(true)
+        chart.setEntryLabelTextSize(12f)
+        chart.setEntryLabelColor(Color.BLACK)
+        chart.setCenterText("Expense Categories")
+        chart.setCenterTextSize(16f)
+        chart.description.isEnabled = false
+        chart.setDrawEntryLabels(true)
+        
+        val legend = chart.legend
+        legend.isEnabled = true
+        legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP
+        legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
+        legend.orientation = Legend.LegendOrientation.VERTICAL
+        legend.setDrawInside(false)
     }
     
-    // Inner class for CategorySpendingAdapter since it was missing
-    inner class CategorySpendingAdapter(
-        private val context: android.content.Context,
-        private var items: List<Pair<String, Double>>
-    ) : androidx.recyclerview.widget.RecyclerView.Adapter<CategorySpendingAdapter.ViewHolder>() {
+    private fun setupBarChart(chart: BarChart) {
+        chart.setFitBars(true)
+        chart.description.isEnabled = false
+        chart.setDrawValueAboveBar(true)
         
-        fun updateData(newItems: List<Pair<String, Double>>) {
-            this.items = newItems
-            notifyDataSetChanged()
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.granularity = 1f
+        xAxis.setDrawGridLines(false)
+        
+        val leftAxis = chart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.axisMinimum = 0f
+        
+        chart.axisRight.isEnabled = false
+        chart.animateY(1500)
+    }
+    
+    private fun loadPieChartData() {
+        // Sample data - replace with your actual data
+        val entries = ArrayList<PieEntry>()
+        entries.add(PieEntry(25f, "Food"))
+        entries.add(PieEntry(35f, "Rent"))
+        entries.add(PieEntry(15f, "Transport"))
+        entries.add(PieEntry(10f, "Utilities"))
+        entries.add(PieEntry(15f, "Others"))
+        
+        val colors = ArrayList<Int>()
+        for (color in ColorTemplate.MATERIAL_COLORS) {
+            colors.add(color)
         }
         
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val itemView = android.view.LayoutInflater.from(context)
-                .inflate(android.R.layout.simple_list_item_2, parent, false)
-            return ViewHolder(itemView)
-        }
+        val dataSet = PieDataSet(entries, "Expense Categories")
+        dataSet.setColors(colors)
+        dataSet.valueTextColor = Color.BLACK
+        dataSet.valueTextSize = 12f
         
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
-            val categoryName = item.first
-            val amount = item.second
-            
-            val textView1 = holder.itemView.findViewById<android.widget.TextView>(android.R.id.text1)
-            val textView2 = holder.itemView.findViewById<android.widget.TextView>(android.R.id.text2)
-            
-            textView1.text = categoryName
-            textView2.text = java.text.NumberFormat.getCurrencyInstance().format(amount)
-        }
+        val data = PieData(dataSet)
+        data.setDrawValues(true)
         
-        override fun getItemCount(): Int = items.size
+        pieChart.data = data
+        pieChart.invalidate()
+    }
+    
+    private fun loadBarChartData() {
+        // Sample data - replace with your actual data
+        val entries = ArrayList<BarEntry>()
+        entries.add(BarEntry(0f, 1000f))
+        entries.add(BarEntry(1f, 1200f))
+        entries.add(BarEntry(2f, 800f))
+        entries.add(BarEntry(3f, 1500f))
+        entries.add(BarEntry(4f, 900f))
+        entries.add(BarEntry(5f, 1100f))
         
-        inner class ViewHolder(itemView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView)
+        val dataSet = BarDataSet(entries, "Monthly Expenses")
+        // Fix the argument type mismatch by directly using the IntArray
+        dataSet.setColors(ColorTemplate.MATERIAL_COLORS, 255)
+        dataSet.valueTextColor = Color.BLACK
+        dataSet.valueTextSize = 12f
+        
+        val data = BarData(dataSet)
+        data.barWidth = 0.9f
+        
+        // Set X-axis labels
+        val xLabel = ArrayList<String>()
+        xLabel.add("Jan")
+        xLabel.add("Feb")
+        xLabel.add("Mar")
+        xLabel.add("Apr")
+        xLabel.add("May")
+        xLabel.add("Jun")
+        
+        barChart.xAxis.valueFormatter = IndexAxisValueFormatter(xLabel)
+        barChart.data = data
+        barChart.invalidate()
     }
 }

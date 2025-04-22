@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.bossfinance"
-    compileSdk = 35
+    compileSdk = 34  // Using SDK 34 for better compatibility
 
     defaultConfig {
         applicationId = "com.example.bossfinance"
         minSdk = 25
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -29,6 +29,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -38,9 +39,31 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    
+    // Enhanced packaging options to fix jlink issues
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1,LICENSE*,NOTICE*}"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
+        }
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+}
+
+kotlin {
+    jvmToolchain(11)
 }
 
 dependencies {
+    // Add desugaring support for older Android API levels
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+    
+    // Explicitly define Kotlin stdlib with the correct version (1.9.22)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
