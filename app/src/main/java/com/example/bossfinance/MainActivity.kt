@@ -43,6 +43,9 @@ class MainActivity : AppCompatActivity() {
         // Create notification channels for budget alerts and daily reminders
         createNotificationChannels()
         
+        // Initialize budget monitoring
+        initializeBudgetMonitoring()
+        
         // Setup navigation
         setupBottomNavigation()
         
@@ -57,6 +60,21 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Check if budget threshold is exceeded and show notification if needed
         checkBudgetThreshold()
+    }
+    
+    /**
+     * Initialize budget monitoring service
+     */
+    private fun initializeBudgetMonitoring() {
+        val settings = notificationRepository.getNotificationSettings()
+        if (settings.budgetAlertsEnabled) {
+            notificationRepository.scheduleBudgetMonitoring()
+        }
+        
+        // Also check immediately if this is a fresh app launch
+        if (budgetRepository.hasBudgetSet()) {
+            notificationRepository.checkBudgetThresholdNow()
+        }
     }
     
     private fun setupBottomNavigation() {

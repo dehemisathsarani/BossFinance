@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import com.example.bossfinance.models.NotificationSettings
+import com.example.bossfinance.receivers.BudgetMonitorReceiver
 import com.example.bossfinance.receivers.DailyReminderReceiver
 import java.util.Calendar
 
@@ -30,10 +31,18 @@ class NotificationRepository private constructor(private val context: Context) {
             apply()
         }
         
+        // Handle daily reminder settings
         if (settings.dailyRemindersEnabled) {
             scheduleDailyReminder(settings.reminderHour, settings.reminderMinute)
         } else {
             cancelDailyReminder()
+        }
+        
+        // Handle budget alert settings
+        if (settings.budgetAlertsEnabled) {
+            scheduleBudgetMonitoring()
+        } else {
+            cancelBudgetMonitoring()
         }
     }
     
@@ -54,6 +63,53 @@ class NotificationRepository private constructor(private val context: Context) {
             reminderHour = reminderHour,
             reminderMinute = reminderMinute
         )
+    }
+    
+    /**
+     * Schedule budget monitoring using AlarmManager
+     */
+    fun scheduleBudgetMonitoring() {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, BudgetMonitorReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            BUDGET_MONITOR_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        // Schedule budget check periodically (twice a day)
+        // First immediate check
+        alarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis(),
+            AlarmManager.INTERVAL_HALF_DAY,
+            pendingIntent
+        )
+    }
+    
+    /**
+     * Check budget threshold immediately
+     */
+    fun checkBudgetThresholdNow() {
+        val intent = Intent(context, BudgetMonitorReceiver::class.java)
+        context.sendBroadcast(intent)
+    }
+    
+    /**
+     * Cancel budget monitoring
+     */
+    private fun cancelBudgetMonitoring() {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, BudgetMonitorReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            BUDGET_MONITOR_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        alarmManager.cancel(pendingIntent)
     }
     
     /**
@@ -114,6 +170,7 @@ class NotificationRepository private constructor(private val context: Context) {
         private const val KEY_REMINDER_HOUR = "reminder_hour"
         private const val KEY_REMINDER_MINUTE = "reminder_minute"
         private const val REMINDER_REQUEST_CODE = 2001
+        private const val BUDGET_MONITOR_REQUEST_CODE = 2002
         
         @Volatile
         private var INSTANCE: NotificationRepository? = null
