@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/budget_settings">
+        <EditTextPreference
+            android:key="monthly_budget"
+            android:title="@string/set_monthly_budget"
+            android:defaultValue="1000.00"
+            android:summary="Set your monthly spending limit"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            android:key="currency_code"
+            android:title="@string/select_currency"
+            android:entries="@array/currency_names"
+            android:entryValues="@array/currency_codes"
+            android:defaultValue="USD"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/notifications">
+        <SwitchPreferenceCompat
+            android:key="budget_alerts_enabled"
+            android:title="@string/budget_alerts"
+            android:summary="@string/budget_alerts_description"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="transaction_reminders_enabled"
+            android:title="@string/transaction_reminders"
+            android:summary="Receive reminders to log your transactions"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/app_info">
+        <SwitchPreferenceCompat
+            android:key="dark_mode"
+            android:title="Dark Theme"
+            android:summary="Use dark theme for the application"
+            android:defaultValue="false" />
+
+        <Preference
+            android:key="app_version"
+            android:title="Version"
+            android:selectable="false" />
+
+        <Preference
+            android:key="about"
+            android:title="@string/about"
+            android:summary="Learn more about BossFinance" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

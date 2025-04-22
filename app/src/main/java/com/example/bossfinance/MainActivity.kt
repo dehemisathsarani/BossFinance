@@ -6,15 +6,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
+import androidx.fragment.app.Fragment
 import com.example.bossfinance.databinding.ActivityMainBinding
 import com.example.bossfinance.models.Budget
 import com.example.bossfinance.repository.BudgetRepository
 import com.example.bossfinance.repository.NotificationRepository
 import com.example.bossfinance.repository.TransactionRepository
+import com.example.bossfinance.ui.dashboard.DashboardFragment
+import com.example.bossfinance.ui.history.HistoryFragment
+import com.example.bossfinance.ui.reports.ReportsFragment
+import com.example.bossfinance.ui.settings.SettingsFragment
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -39,110 +43,62 @@ class MainActivity : AppCompatActivity() {
         // Create notification channels for budget alerts and daily reminders
         createNotificationChannels()
         
-        setupClickListeners()
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        // Refresh dashboard data when returning to this screen
-        updateDashboardData()
+        // Setup navigation
+        setupBottomNavigation()
         
-        // Check if budget threshold is exceeded and show notification if needed
-        checkBudgetThreshold()
-    }
-    
-    private fun updateDashboardData() {
-        // Get real data from repository
-        val currentBalance = transactionRepository.getCurrentBalance()
-        val totalIncome = transactionRepository.getTotalIncome()
-        val totalExpenses = transactionRepository.getTotalExpenses()
-        
-        // Get budget from repository
-        val budget = budgetRepository.getBudget()
-        
-        // Format currency values with the user-selected currency
-        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.getDefault())
-        currencyFormatter.currency = budget.currency
-        
-        // Update current balance
-        binding.tvCurrentBalance.text = currencyFormatter.format(currentBalance)
-        
-        // Update income & expenses
-        binding.tvTotalIncome.text = currencyFormatter.format(totalIncome)
-        binding.tvTotalExpenses.text = currencyFormatter.format(totalExpenses)
-        
-        // Update budget progress
-        val budgetPercentage = budgetRepository.getBudgetUsagePercentage(totalExpenses)
-        binding.tvBudgetPercentage.text = "$budgetPercentage%"
-        binding.budgetProgressBar.progress = budgetPercentage
-        
-        // Change progress bar color based on budget usage
-        val colorRes = when {
-            budgetPercentage < 50 -> android.R.color.holo_green_dark
-            budgetPercentage < 80 -> android.R.color.holo_orange_dark
-            else -> android.R.color.holo_red_dark
-        }
-        binding.budgetProgressBar.setIndicatorColor(getColor(colorRes))
-        
-        // Update budget info text
-        binding.tvBudgetInfo.text = getString(R.string.budget_info)
-            .replace("$0 spent", currencyFormatter.format(totalExpenses) + " spent")
-            .replace("$0 monthly budget", currencyFormatter.format(budget.amount) + " monthly budget")
-    }
-    
-    private fun setupClickListeners() {
-        // Set up click listeners for the buttons
-        binding.btnAddTransaction.setOnClickListener {
-            // Navigate directly to transaction edit screen for adding a new transaction
-            val intent = Intent(this, TransactionEditActivity::class.java)
-            startActivity(intent)
-        }
-        
-        binding.btnViewReports.setOnClickListener {
-            // Navigate to Spending Analysis screen
-            val intent = Intent(this, SpendingAnalysisActivity::class.java)
-            startActivity(intent)
-        }
-        
-        binding.btnSetBudget.setOnClickListener {
-            // Navigate to Budget Setup screen
-            val intent = Intent(this, BudgetSetupActivity::class.java)
-            startActivity(intent)
-        }
-        
-        binding.btnViewTransactionHistory.setOnClickListener {
-            // Navigate to Transaction History screen
-            val intent = Intent(this, TransactionHistoryActivity::class.java)
-            startActivity(intent)
-        }
-        
-        binding.btnNotifications.setOnClickListener {
-            // Navigate to Notifications settings screen
-            val intent = Intent(this, NotificationsActivity::class.java)
-            startActivity(intent)
-        }
-        
-        binding.btnBackupData.setOnClickListener {
-            // Navigate to Backup & Restore screen
-            val intent = Intent(this, BackupRestoreActivity::class.java)
-            startActivity(intent)
-        }
-        
+        // Setup FAB for quick add transaction
         binding.fabQuickAdd.setOnClickListener {
             val intent = Intent(this, TransactionEditActivity::class.java)
             startActivity(intent)
         }
-        
-        // Add click listener to budget progress section to navigate to budget setup
-        binding.budgetProgressBar.setOnClickListener {
-            val intent = Intent(this, BudgetSetupActivity::class.java)
-            startActivity(intent)
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Check if budget threshold is exceeded and show notification if needed
+        checkBudgetThreshold()
+    }
+    
+    private fun setupBottomNavigation() {
+        // Set default fragment
+        if (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) == null) {
+            loadFragment(DashboardFragment())
         }
         
-        binding.tvBudgetPercentage.setOnClickListener {
-            val intent = Intent(this, BudgetSetupActivity::class.java)
-            startActivity(intent)
+        // Set up bottom navigation click listener
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navigation_dashboard -> {
+                    loadFragment(DashboardFragment())
+                    return@setOnItemSelectedListener true
+                }
+                R.id.navigation_history -> {
+                    loadFragment(HistoryFragment())
+                    return@setOnItemSelectedListener true
+                }
+                R.id.navigation_add -> {
+                    // Open transaction add screen directly
+                    val intent = Intent(this, TransactionEditActivity::class.java)
+                    startActivity(intent)
+                    return@setOnItemSelectedListener false
+                }
+                R.id.navigation_reports -> {
+                    loadFragment(ReportsFragment())
+                    return@setOnItemSelectedListener true
+                }
+                R.id.navigation_settings -> {
+                    loadFragment(SettingsFragment())
+                    return@setOnItemSelectedListener true
+                }
+                else -> false
+            }
         }
+    }
+    
+    private fun loadFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.nav_host_fragment, fragment)
+            .commit()
     }
     
     private fun createNotificationChannels() {
