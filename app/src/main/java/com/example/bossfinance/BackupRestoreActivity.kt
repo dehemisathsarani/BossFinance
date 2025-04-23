@@ -11,14 +11,17 @@ import com.example.bossfinance.repository.TransactionRepository
 import com.example.bossfinance.utils.ErrorHandler
 import com.example.bossfinance.utils.FeedbackUtils
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class BackupRestoreActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBackupRestoreBinding
@@ -42,6 +45,35 @@ class BackupRestoreActivity : AppCompatActivity() {
         // Setup click listeners
         setupExportButton()
         setupImportButton()
+        
+        // Check and display if backup exists
+        checkAndDisplayBackupStatus()
+    }
+    
+    private fun checkAndDisplayBackupStatus() {
+        // Run in background to avoid UI freezing
+        Thread {
+            try {
+                val backupFile = getLatestBackupFile()
+                if (backupFile != null) {
+                    val date = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+                        .format(Date(backupFile.lastModified()))
+                    runOnUiThread {
+                        binding.tvBackupStatus.text = getString(R.string.backup_status_found, date)
+                        binding.tvBackupStatus.visibility = View.VISIBLE
+                        binding.tvBackupStatus.setTextColor(getColor(R.color.success_green))
+                    }
+                } else {
+                    runOnUiThread {
+                        binding.tvBackupStatus.text = getString(R.string.backup_status_not_found)
+                        binding.tvBackupStatus.visibility = View.VISIBLE
+                        binding.tvBackupStatus.setTextColor(getColor(R.color.neutral_gray))
+                    }
+                }
+            } catch (e: Exception) {
+                // Silent failure, no need to show error for this check
+            }
+        }.start()
     }
     
     private fun setupExportButton() {
@@ -53,7 +85,19 @@ class BackupRestoreActivity : AppCompatActivity() {
             // Run export operation on a background thread to avoid UI freezing
             Thread {
                 try {
-                    exportData()
+                    val filePath = exportData()
+                    runOnUiThread {
+                        showExportMessage(getString(R.string.export_success_simple), true)
+                        
+                        // Also show a snackbar for better visibility
+                        FeedbackUtils.showSuccessSnackbar(
+                            binding.root, 
+                            getString(R.string.export_success_simple)
+                        )
+                        
+                        // Update backup status
+                        checkAndDisplayBackupStatus()
+                    }
                 } catch (e: Exception) {
                     runOnUiThread {
                         val errorMessage = ErrorHandler.handleException(this, e)
@@ -70,6 +114,15 @@ class BackupRestoreActivity : AppCompatActivity() {
     
     private fun setupImportButton() {
         binding.btnImportData.setOnClickListener {
+            // First check if backup exists
+            if (getLatestBackupFile() == null) {
+                FeedbackUtils.showErrorSnackbar(
+                    binding.root,
+                    getString(R.string.no_backup_found)
+                )
+                return@setOnClickListener
+            }
+            
             // Show confirmation dialog before importing
             FeedbackUtils.showConfirmationDialog(
                 context = this,
@@ -102,44 +155,44 @@ class BackupRestoreActivity : AppCompatActivity() {
         }
     }
     
-    private fun exportData() {
+    private fun exportData(): String {
         try {
             // Get all transactions
             val transactions = transactionRepository.getAllTransactions()
             
             if (transactions.isEmpty()) {
-                throw IOException("No transactions to export")
+                throw IOException(getString(R.string.no_transactions_to_export))
             }
             
             // Convert transactions to JSON
             val jsonArray = JSONArray()
             transactions.forEach { transaction ->
-                val jsonObject = JSONObject()
-                jsonObject.put("id", transaction.id)
-                jsonObject.put("title", transaction.title)
-                jsonObject.put("amount", transaction.amount)
-                jsonObject.put("category", transaction.category)
-                jsonObject.put("date", dateFormat.format(transaction.date))
-                jsonObject.put("isIncome", transaction.isIncome)
+                val jsonObject = JSONObject().apply {
+                    put("id", transaction.id)
+                    put("title", transaction.title)
+                    put("amount", transaction.amount)
+                    put("category", transaction.category)
+                    put("date", dateFormat.format(transaction.date))
+                    put("isIncome", transaction.isIncome)
+                }
                 jsonArray.put(jsonObject)
             }
             
-            // Write to file in internal storage
+            // Always use the same file name for simplicity
             val file = File(filesDir, backupFileName)
-            FileOutputStream(file).use {
-                it.write(jsonArray.toString().toByteArray())
+            
+            try {
+                // Write to file in internal storage with proper error handling
+                FileOutputStream(file).use { outputStream ->
+                    outputStream.write(jsonArray.toString().toByteArray())
+                    outputStream.flush()
+                }
+                
+                return file.absolutePath
+            } catch (e: IOException) {
+                throw IOException("Failed to write backup file: ${e.message}")
             }
             
-            // Show success message on UI thread
-            runOnUiThread {
-                showExportMessage(getString(R.string.export_success, file.absolutePath), true)
-                
-                // Also show a snackbar for better visibility
-                FeedbackUtils.showSuccessSnackbar(
-                    binding.root, 
-                    getString(R.string.export_success, file.absolutePath)
-                )
-            }
         } catch (e: Exception) {
             // Log the exception
             ErrorHandler.logError("BackupRestoreActivity", "Export failed", e)
@@ -149,49 +202,143 @@ class BackupRestoreActivity : AppCompatActivity() {
         }
     }
     
+    private fun getLatestBackupFile(): File? {
+        // First try the exact file name
+        val exactFile = File(filesDir, backupFileName)
+        if (exactFile.exists() && exactFile.isFile && exactFile.length() > 0) {
+            return exactFile
+        }
+        
+        // If not found, try to find any backup file
+        val backupFiles = filesDir.listFiles { file -> 
+            file.isFile && file.name.contains("boss_finance_backup") && file.name.endsWith(".json") 
+        } ?: return null
+        
+        return if (backupFiles.isNotEmpty()) {
+            backupFiles.maxByOrNull { it.lastModified() }
+        } else {
+            null
+        }
+    }
+    
     private fun importData() {
         try {
-            // Check if backup file exists
-            val file = File(filesDir, backupFileName)
-            if (!file.exists()) {
-                throw IOException(getString(R.string.no_backup_found))
+            // Find the backup file
+            val backupFile = getLatestBackupFile()
+                ?: throw IOException(getString(R.string.no_backup_found))
+            
+            // Read JSON from file with proper error handling
+            val json = try {
+                FileInputStream(backupFile).use { inputStream ->
+                    inputStream.bufferedReader().use { it.readText() }
+                }
+            } catch (e: IOException) {
+                throw IOException("Failed to read backup file: ${e.message}")
             }
             
-            // Read JSON from file
-            val json = FileInputStream(file).bufferedReader().use { it.readText() }
             if (json.isBlank()) {
-                throw IOException("Backup file is empty")
+                throw IOException(getString(R.string.backup_file_empty))
             }
             
-            val jsonArray = JSONArray(json)
+            // Parse JSON data
+            val jsonArray = try {
+                JSONArray(json)
+            } catch (e: JSONException) {
+                throw IOException(getString(R.string.invalid_backup_format))
+            }
             
             // Validate JSON data first
             if (jsonArray.length() == 0) {
-                throw IOException("No transactions found in backup file")
+                throw IOException(getString(R.string.no_transactions_in_backup))
             }
             
             // Convert JSON to transactions
             val transactions = mutableListOf<Transaction>()
+            var parseErrors = 0
+            
             for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
-                
-                // Validate required fields
-                val requiredFields = listOf("id", "title", "amount", "category", "date", "isIncome")
-                for (field in requiredFields) {
-                    if (!jsonObject.has(field)) {
-                        throw IOException("Invalid backup data: missing $field field")
+                try {
+                    val jsonObject = jsonArray.getJSONObject(i)
+                    
+                    // Validate required fields
+                    val requiredFields = listOf("id", "title", "amount", "category", "date", "isIncome")
+                    val missingFields = requiredFields.filter { !jsonObject.has(it) }
+                    
+                    if (missingFields.isNotEmpty()) {
+                        parseErrors++
+                        ErrorHandler.logError(
+                            "BackupRestoreActivity", 
+                            "Missing fields in transaction at index $i: ${missingFields.joinToString()}"
+                        )
+                        continue // Skip this transaction
                     }
+                    
+                    // Parse transaction data with proper error handling
+                    val id = try {
+                        jsonObject.getString("id")
+                    } catch (e: Exception) {
+                        // Generate a new ID if original can't be parsed
+                        UUID.randomUUID().toString()
+                    }
+                    
+                    val title = try {
+                        jsonObject.getString("title")
+                    } catch (e: Exception) {
+                        "Unknown Transaction"
+                    }
+                    
+                    val amount = try {
+                        jsonObject.getDouble("amount")
+                    } catch (e: Exception) {
+                        parseErrors++
+                        continue // Skip this transaction
+                    }
+                    
+                    val category = try {
+                        jsonObject.getString("category")
+                    } catch (e: Exception) {
+                        "Miscellaneous"
+                    }
+                    
+                    // Parse date with proper error handling
+                    val dateStr = jsonObject.getString("date")
+                    val date = try {
+                        dateFormat.parse(dateStr) ?: Date()
+                    } catch (e: ParseException) {
+                        // Use current date if parsing fails
+                        Date()
+                    }
+                    
+                    val isIncome = try {
+                        jsonObject.getBoolean("isIncome")
+                    } catch (e: Exception) {
+                        // Default to expense if can't determine
+                        false
+                    }
+                    
+                    val transaction = Transaction(
+                        id = id,
+                        title = title,
+                        amount = amount,
+                        category = category,
+                        date = date,
+                        isIncome = isIncome
+                    )
+                    transactions.add(transaction)
+                } catch (e: Exception) {
+                    // Log the error but continue processing other transactions
+                    parseErrors++
+                    ErrorHandler.logError(
+                        "BackupRestoreActivity", 
+                        "Error parsing transaction at index $i", 
+                        e
+                    )
                 }
-                
-                val transaction = Transaction(
-                    id = jsonObject.getString("id"),
-                    title = jsonObject.getString("title"),
-                    amount = jsonObject.getDouble("amount"),
-                    category = jsonObject.getString("category"),
-                    date = dateFormat.parse(jsonObject.getString("date")) ?: Date(),
-                    isIncome = jsonObject.getBoolean("isIncome")
-                )
-                transactions.add(transaction)
+            }
+            
+            // Make sure we have at least some transactions to import
+            if (transactions.isEmpty()) {
+                throw IOException(getString(R.string.no_valid_transactions_in_backup))
             }
             
             // Clear existing transactions and add imported ones
@@ -199,12 +346,18 @@ class BackupRestoreActivity : AppCompatActivity() {
             
             // Show success message on UI thread
             runOnUiThread {
-                showImportMessage(getString(R.string.import_success), true)
+                val message = if (parseErrors > 0) {
+                    getString(R.string.import_partial_success, transactions.size, parseErrors)
+                } else {
+                    getString(R.string.import_success)
+                }
+                
+                showImportMessage(message, true)
                 
                 // Also show a snackbar with action to refresh the app
                 FeedbackUtils.showActionSnackbar(
                     binding.root,
-                    getString(R.string.import_success),
+                    message,
                     getString(android.R.string.ok)
                 ) {
                     // Navigate back to refresh data

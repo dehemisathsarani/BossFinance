@@ -88,11 +88,21 @@
     <string name="export_data_description">Export all your transaction data to a file on your device for backup purposes.</string>
     <string name="import_data_description">Import transaction data from a previously created backup file.</string>
     <string name="export_success">Data exported successfully to: %1$s</string>
+    <string name="export_success_simple">Data exported successfully!</string>
     <string name="export_error">Failed to export data: %1$s</string>
     <string name="import_success">Data imported successfully</string>
     <string name="import_error">Failed to import data: %1$s</string>
     <string name="confirm_import">Importing data will replace all existing transactions. Continue?</string>
     <string name="no_backup_found">No backup file found</string>
+    <string name="no_transactions_to_export">No transactions to export</string>
+    <string name="backup_file_empty">The backup file is empty</string>
+    <string name="invalid_backup_format">Invalid backup file format</string>
+    <string name="no_transactions_in_backup">No transactions found in backup file</string>
+    <string name="invalid_backup_data">Invalid backup data: missing %1$s field</string>
+    <string name="no_valid_transactions_in_backup">No valid transactions found in backup file</string>
+    <string name="import_partial_success">Imported %1$d transactions successfully. %2$d transactions were skipped due to errors.</string>
+    <string name="share_backup">Share Backup File</string>
+    <string name="share_error">Failed to share backup file</string>
     
     <!-- Notifications Strings -->
     <string name="notifications_settings">Notifications</string>
