@@ -33,4 +33,10 @@
     <color name="income_green">#008F5D</color>
     <color name="expense_red">#CF1020</color>
     <color name="neutral_gray">#757575</color>
+
+    <!-- Status and Feedback Colors -->
+    <color name="success_green">#4CAF50</color>
+    <color name="error_red">#F44336</color>
+    <color name="warning_amber">#FFC107</color>
+    <color name="info_blue">#2196F3</color>
 </resources>

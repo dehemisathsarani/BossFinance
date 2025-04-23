@@ -56,6 +56,14 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/export_data" />
 
+            <ProgressBar
+                android:id="@+id/progressExport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/tvExportStatus"
                 android:layout_width="match_parent"
@@ -104,6 +112,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/import_data" />
+
+            <ProgressBar
+                android:id="@+id/progressImport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvImportStatus"

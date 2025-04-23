@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/onboarding_gradient_background"
     tools:context=".OnboardingActivity">
 
     <androidx.viewpager2.widget.ViewPager2
@@ -41,7 +42,7 @@
             android:layout_height="wrap_content"
             android:text="@string/skip"
             android:background="?attr/selectableItemBackground"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="@color/white"
             style="@style/Widget.Material3.Button.TextButton" />
 
         <View

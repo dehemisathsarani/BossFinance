@@ -7,6 +7,17 @@
     android:background="@drawable/splash_background"
     tools:context=".SplashActivity">
 
+    <View
+        android:id="@+id/logoBackgroundGradient"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
+        android:background="@drawable/logo_gradient_circle"
+        android:alpha="0.9"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageView
         android:id="@+id/ivLogo"
         android:layout_width="200dp"

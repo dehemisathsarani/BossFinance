@@ -14,17 +14,28 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <ImageView
+            android:id="@+id/ivCategoryIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@string/category_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/tvTransactionCategory"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tvTransactionTitle"
+            tools:src="@drawable/ic_food" />
+
         <TextView
             android:id="@+id/tvTransactionTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@android:color/black"
             android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@+id/tvTransactionAmount"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/ivCategoryIcon"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Groceries" />
 
@@ -34,7 +45,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="14sp"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/tvTransactionTitle"
             app:layout_constraintTop_toBottomOf="@+id/tvTransactionTitle"
             tools:text="Food &amp; Dining" />
 
@@ -44,7 +55,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="12sp"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/tvTransactionCategory"
             app:layout_constraintTop_toBottomOf="@+id/tvTransactionCategory"
             tools:text="April 20, 2025" />
 

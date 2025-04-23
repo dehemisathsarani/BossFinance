@@ -5,13 +5,15 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bossfinance.databinding.ActivityTransactionEditBinding
 import com.example.bossfinance.models.Transaction
 import com.example.bossfinance.models.TransactionCategories
+import com.example.bossfinance.repository.NotificationRepository
 import com.example.bossfinance.repository.TransactionRepository
+import com.example.bossfinance.utils.ErrorHandler
+import com.example.bossfinance.utils.FeedbackUtils
+import com.example.bossfinance.utils.InputValidator
 import com.google.android.material.tabs.TabLayout
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -21,6 +23,9 @@ import java.util.Locale
 class TransactionEditActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTransactionEditBinding
     private lateinit var transactionRepository: TransactionRepository
+    private lateinit var notificationRepository: NotificationRepository
+    private lateinit var inputValidator: InputValidator
+    
     private var transactionDate = Calendar.getInstance()
     private var isIncome = true
     private var transactionId: String? = null
@@ -35,8 +40,10 @@ class TransactionEditActivity : AppCompatActivity() {
         binding = ActivityTransactionEditBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        // Initialize repository
+        // Initialize repositories and utilities
         transactionRepository = TransactionRepository.getInstance(applicationContext)
+        notificationRepository = NotificationRepository.getInstance(applicationContext)
+        inputValidator = InputValidator(this)
         
         // Check if we're editing an existing transaction
         transactionId = intent.getStringExtra(EXTRA_TRANSACTION_ID)
@@ -46,6 +53,7 @@ class TransactionEditActivity : AppCompatActivity() {
         setupToolbar()
         setupTabLayout()
         setupDatePicker()
+        setupInputValidation()
         setupSaveButton()
         setupDeleteButton()
         
@@ -98,6 +106,17 @@ class TransactionEditActivity : AppCompatActivity() {
         }
     }
     
+    private fun setupInputValidation() {
+        // Add text change listeners to clear errors as user types
+        binding.etTransactionTitle.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) binding.titleInputLayout.error = null
+        }
+        
+        binding.etAmount.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) binding.amountInputLayout.error = null
+        }
+    }
+    
     private fun updateDateDisplay() {
         binding.tvDatePicker.text = dateFormatter.format(transactionDate.time)
     }
@@ -147,53 +166,78 @@ class TransactionEditActivity : AppCompatActivity() {
     }
     
     private fun loadTransactionData() {
-        val transaction = transactionId?.let { transactionRepository.getTransaction(it) }
-        
-        transaction?.let {
-            // Set income/expense tab
-            isIncome = it.isIncome
-            binding.tabLayout.getTabAt(if (isIncome) 0 else 1)?.select()
+        try {
+            val transaction = transactionId?.let { transactionRepository.getTransaction(it) }
             
-            // Set fields
-            binding.etTransactionTitle.setText(it.title)
-            binding.etAmount.setText(it.amount.toString())
-            
-            // Set date
-            transactionDate.time = it.date
-            updateDateDisplay()
-            
-            // Set category spinner
-            updateCategorySpinner(isIncome)
-            val categoryPosition = if (isIncome) {
-                TransactionCategories.INCOME_CATEGORIES.indexOf(it.category)
-            } else {
-                TransactionCategories.EXPENSE_CATEGORIES.indexOf(it.category)
+            transaction?.let {
+                // Set income/expense tab
+                isIncome = it.isIncome
+                binding.tabLayout.getTabAt(if (isIncome) 0 else 1)?.select()
+                
+                // Set fields
+                binding.etTransactionTitle.setText(it.title)
+                binding.etAmount.setText(it.amount.toString())
+                
+                // Set date
+                transactionDate.time = it.date
+                updateDateDisplay()
+                
+                // Set category spinner
+                updateCategorySpinner(isIncome)
+                val categoryPosition = if (isIncome) {
+                    TransactionCategories.INCOME_CATEGORIES.indexOf(it.category)
+                } else {
+                    TransactionCategories.EXPENSE_CATEGORIES.indexOf(it.category)
+                }
+                if (categoryPosition != -1) {
+                    binding.spinnerCategory.setSelection(categoryPosition)
+                }
+            } ?: run {
+                // Transaction not found - show error and close activity
+                FeedbackUtils.showErrorSnackbar(binding.root, getString(R.string.error_generic))
+                finish()
             }
-            if (categoryPosition != -1) {
-                binding.spinnerCategory.setSelection(categoryPosition)
-            }
+        } catch (e: Exception) {
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
+            finish()
         }
     }
     
     private fun validateInputs(): Boolean {
         var isValid = true
         
-        // Check title
-        if (binding.etTransactionTitle.text.isNullOrBlank()) {
-            binding.titleInputLayout.error = getString(R.string.please_enter_title)
+        // Validate title
+        val titleError = inputValidator.validateRequired(binding.etTransactionTitle.text.toString())
+        if (titleError != null) {
+            binding.titleInputLayout.error = titleError
             isValid = false
         } else {
             binding.titleInputLayout.error = null
         }
         
-        // Check amount
-        if (binding.etAmount.text.isNullOrBlank() || 
-            binding.etAmount.text.toString().toDoubleOrNull() == null ||
-            binding.etAmount.text.toString().toDouble() <= 0) {
-            binding.amountInputLayout.error = getString(R.string.please_enter_amount)
+        // Validate amount
+        val amountError = inputValidator.validateAmount(binding.etAmount.text.toString())
+        if (amountError != null) {
+            binding.amountInputLayout.error = amountError
             isValid = false
         } else {
             binding.amountInputLayout.error = null
+        }
+        
+        // Validate date (optional validation for demonstration)
+        val dateError = inputValidator.validateDate(transactionDate.timeInMillis)
+        if (dateError != null) {
+            FeedbackUtils.showToast(this, dateError)
+            isValid = false
+        }
+        
+        // Validate category
+        val category = binding.spinnerCategory.selectedItem?.toString()
+        val categoryError = inputValidator.validateCategory(category)
+        if (categoryError != null) {
+            FeedbackUtils.showToast(this, categoryError)
+            isValid = false
         }
         
         return isValid
@@ -207,17 +251,13 @@ class TransactionEditActivity : AppCompatActivity() {
         val amount = try {
             amountStr.toDouble()
         } catch (e: NumberFormatException) {
-            // Show error and return early if amount can't be parsed
-            binding.amountInputLayout.error = getString(R.string.please_enter_valid_amount)
+            // This should be caught by validateInputs(), but added for safety
+            binding.amountInputLayout.error = getString(R.string.error_amount_invalid)
             return
         }
         
-        // Make sure we have a valid category selected
-        val category = binding.spinnerCategory.selectedItem?.toString() ?: run {
-            Toast.makeText(this, getString(R.string.please_select_category), Toast.LENGTH_SHORT).show()
-            return
-        }
-        
+        // Get category (already validated)
+        val category = binding.spinnerCategory.selectedItem.toString()
         val date = transactionDate.time
         
         try {
@@ -232,7 +272,7 @@ class TransactionEditActivity : AppCompatActivity() {
                     isIncome = isIncome
                 )
                 transactionRepository.updateTransaction(transaction)
-                Toast.makeText(this, getString(R.string.transaction_saved), Toast.LENGTH_SHORT).show()
+                FeedbackUtils.showSuccessSnackbar(binding.root, getString(R.string.transaction_saved))
             } else {
                 // Create new transaction
                 val transaction = Transaction(
@@ -243,32 +283,45 @@ class TransactionEditActivity : AppCompatActivity() {
                     isIncome = isIncome
                 )
                 transactionRepository.addTransaction(transaction)
-                Toast.makeText(this, getString(R.string.transaction_saved), Toast.LENGTH_SHORT).show()
+                FeedbackUtils.showSuccessSnackbar(binding.root, getString(R.string.transaction_saved))
             }
-            finish()
+            
+            // Check budget threshold after adding/updating a transaction
+            if (!isIncome) {
+                notificationRepository.checkBudgetThresholdNow()
+            }
+            
+            // Close activity after a short delay to allow snackbar to be seen
+            binding.root.postDelayed({ finish() }, 1000)
         } catch (e: Exception) {
             // Handle any unexpected errors during save
-            Toast.makeText(this, "Error saving transaction", Toast.LENGTH_LONG).show()
-            e.printStackTrace()
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
         }
     }
     
     private fun showDeleteConfirmationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_transaction)
-            .setMessage(R.string.delete_confirmation)
-            .setPositiveButton(R.string.yes) { _, _ ->
-                deleteTransaction()
-            }
-            .setNegativeButton(R.string.no, null)
-            .show()
+        FeedbackUtils.showConfirmationDialog(
+            context = this,
+            title = getString(R.string.delete_transaction),
+            message = getString(R.string.delete_confirmation),
+            positiveButtonText = getString(R.string.yes),
+            negativeButtonText = getString(R.string.no),
+            onPositiveClick = { deleteTransaction() }
+        )
     }
     
     private fun deleteTransaction() {
-        transactionId?.let {
-            transactionRepository.deleteTransaction(it)
-            Toast.makeText(this, getString(R.string.transaction_deleted), Toast.LENGTH_SHORT).show()
-            finish()
+        try {
+            transactionId?.let {
+                transactionRepository.deleteTransaction(it)
+                FeedbackUtils.showSuccessSnackbar(binding.root, getString(R.string.transaction_deleted))
+                // Close activity after a short delay to allow snackbar to be seen
+                binding.root.postDelayed({ finish() }, 1000)
+            }
+        } catch (e: Exception) {
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
         }
     }
     

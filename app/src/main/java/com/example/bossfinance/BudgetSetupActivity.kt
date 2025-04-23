@@ -4,17 +4,20 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.widget.ArrayAdapter
 import android.widget.SeekBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.bossfinance.databinding.ActivityBudgetSetupBinding
 import com.example.bossfinance.models.Budget
 import com.example.bossfinance.repository.BudgetRepository
+import com.example.bossfinance.utils.ErrorHandler
+import com.example.bossfinance.utils.FeedbackUtils
+import com.example.bossfinance.utils.InputValidator
 import java.util.Currency
 import java.util.Locale
 
 class BudgetSetupActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBudgetSetupBinding
     private lateinit var budgetRepository: BudgetRepository
+    private lateinit var inputValidator: InputValidator
     private var notificationThreshold = 90
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,6 +26,7 @@ class BudgetSetupActivity : AppCompatActivity() {
         setContentView(binding.root)
         
         budgetRepository = BudgetRepository.getInstance(this)
+        inputValidator = InputValidator(this)
         
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -30,41 +34,61 @@ class BudgetSetupActivity : AppCompatActivity() {
         
         setupCurrencySpinner()
         setupCurrentValues()
+        setupInputValidation()
         setupNotificationThresholdControl()
         setupSaveButton()
     }
     
     private fun setupCurrencySpinner() {
-        val availableCurrencies = Currency.getAvailableCurrencies().sortedBy { it.displayName }
-        val currencyNames = availableCurrencies.map { "${it.displayName} (${it.symbol})" }.toTypedArray()
-        
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, currencyNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerCurrency.adapter = adapter
-        
-        // Set default selection to current system currency or user's saved preference
-        val currentBudget = budgetRepository.getBudget()
-        val currentCurrencyIndex = availableCurrencies.indexOfFirst { 
-            it.currencyCode == currentBudget.currency.currencyCode 
-        }
-        if (currentCurrencyIndex != -1) {
-            binding.spinnerCurrency.setSelection(currentCurrencyIndex)
+        try {
+            val availableCurrencies = Currency.getAvailableCurrencies().sortedBy { it.displayName }
+            val currencyNames = availableCurrencies.map { "${it.displayName} (${it.symbol})" }.toTypedArray()
+            
+            val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, currencyNames)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            binding.spinnerCurrency.adapter = adapter
+            
+            // Set default selection to current system currency or user's saved preference
+            val currentBudget = budgetRepository.getBudget()
+            val currentCurrencyIndex = availableCurrencies.indexOfFirst { 
+                it.currencyCode == currentBudget.currency.currencyCode 
+            }
+            if (currentCurrencyIndex != -1) {
+                binding.spinnerCurrency.setSelection(currentCurrencyIndex)
+            }
+        } catch (e: Exception) {
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
+            // Fall back to default locale currency
+            binding.spinnerCurrency.setSelection(0)
         }
     }
     
     private fun setupCurrentValues() {
-        val budget = budgetRepository.getBudget()
-        
-        // Set current budget amount
-        binding.etBudgetAmount.setText(budget.amount.toString())
-        
-        // Set notification state
-        binding.switchNotifications.isChecked = budget.notificationEnabled
-        
-        // Set notification threshold
-        notificationThreshold = budget.notificationThreshold
-        binding.seekBarThreshold.progress = notificationThreshold
-        updateThresholdLabel()
+        try {
+            val budget = budgetRepository.getBudget()
+            
+            // Set current budget amount
+            binding.etBudgetAmount.setText(budget.amount.toString())
+            
+            // Set notification state
+            binding.switchNotifications.isChecked = budget.notificationEnabled
+            
+            // Set notification threshold
+            notificationThreshold = budget.notificationThreshold
+            binding.seekBarThreshold.progress = notificationThreshold
+            updateThresholdLabel()
+        } catch (e: Exception) {
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
+        }
+    }
+    
+    private fun setupInputValidation() {
+        // Clear error as the user types
+        binding.etBudgetAmount.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) binding.budgetAmountInputLayout.error = null
+        }
     }
     
     private fun setupNotificationThresholdControl() {
@@ -95,35 +119,45 @@ class BudgetSetupActivity : AppCompatActivity() {
     }
     
     private fun validateInputs(): Boolean {
-        val amountText = binding.etBudgetAmount.text.toString()
-        if (amountText.isBlank() || amountText.toDoubleOrNull() == null || amountText.toDouble() <= 0) {
-            binding.budgetAmountInputLayout.error = getString(R.string.please_enter_valid_amount)
+        // Validate amount using our InputValidator
+        val amountError = inputValidator.validateAmount(binding.etBudgetAmount.text.toString())
+        if (amountError != null) {
+            binding.budgetAmountInputLayout.error = amountError
             return false
         }
+        
         binding.budgetAmountInputLayout.error = null
         return true
     }
     
     private fun saveBudgetSettings() {
-        val amount = binding.etBudgetAmount.text.toString().toDouble()
-        
-        // Get selected currency
-        val availableCurrencies = Currency.getAvailableCurrencies().sortedBy { it.displayName }
-        val selectedCurrency = availableCurrencies[binding.spinnerCurrency.selectedItemPosition]
-        
-        val notificationsEnabled = binding.switchNotifications.isChecked
-        
-        val budget = Budget(
-            amount = amount,
-            currency = selectedCurrency,
-            notificationEnabled = notificationsEnabled,
-            notificationThreshold = notificationThreshold
-        )
-        
-        budgetRepository.saveBudget(budget)
-        
-        Toast.makeText(this, getString(R.string.budget_saved), Toast.LENGTH_SHORT).show()
-        finish()
+        try {
+            val amountText = binding.etBudgetAmount.text.toString()
+            val amount = amountText.toDouble()
+            
+            // Get selected currency
+            val availableCurrencies = Currency.getAvailableCurrencies().sortedBy { it.displayName }
+            val selectedCurrency = availableCurrencies[binding.spinnerCurrency.selectedItemPosition]
+            
+            val notificationsEnabled = binding.switchNotifications.isChecked
+            
+            val budget = Budget(
+                amount = amount,
+                currency = selectedCurrency,
+                notificationEnabled = notificationsEnabled,
+                notificationThreshold = notificationThreshold
+            )
+            
+            budgetRepository.saveBudget(budget)
+            
+            FeedbackUtils.showSuccessSnackbar(binding.root, getString(R.string.budget_saved))
+            
+            // Close activity after a short delay to show the snackbar
+            binding.root.postDelayed({ finish() }, 1000)
+        } catch (e: Exception) {
+            val errorMessage = ErrorHandler.handleException(this, e)
+            FeedbackUtils.showErrorSnackbar(binding.root, errorMessage)
+        }
     }
     
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

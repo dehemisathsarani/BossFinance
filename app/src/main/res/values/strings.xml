@@ -36,6 +36,7 @@
     <string name="transaction_title">Title</string>
     <string name="amount">Amount</string>
     <string name="category">Category</string>
+    <string name="category_icon">Category icon</string>
     <string name="date">Date</string>
     <string name="income">Income</string>
     <string name="expense">Expense</string>
@@ -124,6 +125,23 @@
     <string name="app_info">App Information</string>
     <string name="about">About BossFinance</string>
     <string name="contact_support">Contact Support</string>
+    
+    <!-- Error and Validation Messages -->
+    <string name="error_field_required">This field is required</string>
+    <string name="error_amount_positive">Amount must be greater than zero</string>
+    <string name="error_amount_invalid">Please enter a valid number</string>
+    <string name="error_email_invalid">Please enter a valid email address</string>
+    <string name="error_date_too_old">Date is too far in the past</string>
+    <string name="error_date_future">Date cannot be too far in the future</string>
+    <string name="error_category_required">Please select a category</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_storage">Storage error. Please check device storage.</string>
+    
+    <!-- User Feedback Messages -->
+    <string name="success_operation">Operation completed successfully</string>
+    <string name="feedback_swipe_to_delete">Swipe to delete</string>
+    <string name="feedback_tap_to_edit">Tap to edit</string>
     
     <!-- Bottom Navigation Menu -->
     <string name="dashboard">Dashboard</string>
