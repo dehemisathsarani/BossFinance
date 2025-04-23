@@ -18,6 +18,19 @@
         app:layout_constraintTop_toTopOf="parent"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
+    <!-- Status text view to display backup information -->
+    <TextView
+        android:id="@+id/tvBackupStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        android:textAppearance="?attr/textAppearanceBody2"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="Last backup: April 23, 2025 10:30 AM" />
+
     <androidx.cardview.widget.CardView
         android:id="@+id/exportCard"
         android:layout_width="match_parent"
@@ -27,7 +40,7 @@
         app:cardElevation="4dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar">
+        app:layout_constraintTop_toBottomOf="@id/tvBackupStatus">
 
         <LinearLayout
             android:layout_width="match_parent"

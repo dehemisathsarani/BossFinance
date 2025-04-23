@@ -131,10 +131,62 @@ class TransactionRepository private constructor(context: Context) {
     }
     
     // Replace all transactions with a new list (for import function)
-    fun replaceAllTransactions(newTransactions: List<Transaction>) {
+    fun replaceAllTransactions(newTransactions: List<Transaction>): Boolean {
+        return try {
+            // First, completely clear SharedPreferences by removing the key entirely
+            val editor = sharedPreferences.edit()
+            editor.remove(KEY_TRANSACTIONS)
+            // Force synchronous commit to ensure the key is removed
+            val clearSuccess = editor.commit()
+            
+            if (!clearSuccess) {
+                println("Warning: Failed to clear existing transaction data")
+            }
+            
+            // Now clear in-memory transactions
+            transactions.clear()
+            
+            // Add new transactions from the backup
+            transactions.addAll(newTransactions)
+            
+            // Create JSON representation of all transactions
+            val jsonArray = JSONArray()
+            transactions.forEach { transaction ->
+                val jsonObject = JSONObject().apply {
+                    put("id", transaction.id)
+                    put("title", transaction.title)
+                    put("amount", transaction.amount)
+                    put("category", transaction.category)
+                    put("date", dateFormat.format(transaction.date))
+                    put("isIncome", transaction.isIncome)
+                }
+                jsonArray.put(jsonObject)
+            }
+            
+            // Save the new transaction data with synchronous commit
+            val saveEditor = sharedPreferences.edit()
+            saveEditor.putString(KEY_TRANSACTIONS, jsonArray.toString())
+            val saveSuccess = saveEditor.commit()
+            
+            if (saveSuccess) {
+                println("Successfully saved ${transactions.size} transactions from backup")
+            } else {
+                println("Failed to commit transaction data to SharedPreferences")
+                return false
+            }
+            
+            return true
+        } catch (e: Exception) {
+            println("Error replacing transactions: ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+    
+    // Force clear all cached data and reload from SharedPreferences
+    fun refreshFromStorage() {
         transactions.clear()
-        transactions.addAll(newTransactions)
-        saveTransactions()
+        loadTransactions()
     }
     
     // Save the last used category for quick access
@@ -212,6 +264,13 @@ class TransactionRepository private constructor(context: Context) {
                 val instance = TransactionRepository(context.applicationContext)
                 INSTANCE = instance
                 instance
+            }
+        }
+        
+        // Add method to clear singleton instance when needed (for forced refresh)
+        fun clearInstance() {
+            synchronized(this) {
+                INSTANCE = null
             }
         }
     }

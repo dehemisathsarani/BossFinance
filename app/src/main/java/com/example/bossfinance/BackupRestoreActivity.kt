@@ -5,11 +5,15 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.bossfinance.databinding.ActivityBackupRestoreBinding
 import com.example.bossfinance.models.Transaction
 import com.example.bossfinance.repository.TransactionRepository
 import com.example.bossfinance.utils.ErrorHandler
 import com.example.bossfinance.utils.FeedbackUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -51,20 +55,20 @@ class BackupRestoreActivity : AppCompatActivity() {
     }
     
     private fun checkAndDisplayBackupStatus() {
-        // Run in background to avoid UI freezing
-        Thread {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val backupFile = getLatestBackupFile()
                 if (backupFile != null) {
                     val date = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
                         .format(Date(backupFile.lastModified()))
-                    runOnUiThread {
+                        
+                    withContext(Dispatchers.Main) {
                         binding.tvBackupStatus.text = getString(R.string.backup_status_found, date)
                         binding.tvBackupStatus.visibility = View.VISIBLE
                         binding.tvBackupStatus.setTextColor(getColor(R.color.success_green))
                     }
                 } else {
-                    runOnUiThread {
+                    withContext(Dispatchers.Main) {
                         binding.tvBackupStatus.text = getString(R.string.backup_status_not_found)
                         binding.tvBackupStatus.visibility = View.VISIBLE
                         binding.tvBackupStatus.setTextColor(getColor(R.color.neutral_gray))
@@ -72,8 +76,9 @@ class BackupRestoreActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 // Silent failure, no need to show error for this check
+                ErrorHandler.logError("BackupRestoreActivity", "Error checking backup status", e)
             }
-        }.start()
+        }
     }
     
     private fun setupExportButton() {
@@ -82,11 +87,12 @@ class BackupRestoreActivity : AppCompatActivity() {
             binding.progressExport.visibility = View.VISIBLE
             binding.tvExportStatus.visibility = View.GONE
             
-            // Run export operation on a background thread to avoid UI freezing
-            Thread {
+            // Use Kotlin coroutines for background processing
+            lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    val filePath = exportData()
-                    runOnUiThread {
+                    // Call exportData but don't store unused return value
+                    exportData()
+                    withContext(Dispatchers.Main) {
                         showExportMessage(getString(R.string.export_success_simple), true)
                         
                         // Also show a snackbar for better visibility
@@ -99,59 +105,65 @@ class BackupRestoreActivity : AppCompatActivity() {
                         checkAndDisplayBackupStatus()
                     }
                 } catch (e: Exception) {
-                    runOnUiThread {
-                        val errorMessage = ErrorHandler.handleException(this, e)
+                    withContext(Dispatchers.Main) {
+                        val errorMessage = ErrorHandler.handleException(this@BackupRestoreActivity, e)
                         showExportMessage(errorMessage, false)
                     }
                 } finally {
-                    runOnUiThread {
+                    withContext(Dispatchers.Main) {
                         binding.progressExport.visibility = View.GONE
                     }
                 }
-            }.start()
+            }
         }
     }
     
     private fun setupImportButton() {
         binding.btnImportData.setOnClickListener {
-            // First check if backup exists
-            if (getLatestBackupFile() == null) {
-                FeedbackUtils.showErrorSnackbar(
-                    binding.root,
-                    getString(R.string.no_backup_found)
-                )
-                return@setOnClickListener
-            }
-            
-            // Show confirmation dialog before importing
-            FeedbackUtils.showConfirmationDialog(
-                context = this,
-                title = getString(R.string.import_data),
-                message = getString(R.string.confirm_import),
-                positiveButtonText = getString(R.string.yes),
-                negativeButtonText = getString(R.string.no),
-                onPositiveClick = {
-                    // Show loading state
-                    binding.progressImport.visibility = View.VISIBLE
-                    binding.tvImportStatus.visibility = View.GONE
+            lifecycleScope.launch(Dispatchers.IO) {
+                // First check if backup exists
+                val backupFile = getLatestBackupFile()
+                
+                withContext(Dispatchers.Main) {
+                    if (backupFile == null) {
+                        FeedbackUtils.showErrorSnackbar(
+                            binding.root,
+                            getString(R.string.no_backup_found)
+                        )
+                        return@withContext
+                    }
                     
-                    // Run import on background thread
-                    Thread {
-                        try {
-                            importData()
-                        } catch (e: Exception) {
-                            runOnUiThread {
-                                val errorMessage = ErrorHandler.handleException(this, e)
-                                showImportMessage(errorMessage, false)
-                            }
-                        } finally {
-                            runOnUiThread {
-                                binding.progressImport.visibility = View.GONE
+                    // Show confirmation dialog before importing
+                    FeedbackUtils.showConfirmationDialog(
+                        context = this@BackupRestoreActivity,
+                        title = getString(R.string.import_data),
+                        message = getString(R.string.confirm_import),
+                        positiveButtonText = getString(R.string.yes),
+                        negativeButtonText = getString(R.string.no),
+                        onPositiveClick = {
+                            // Show loading state
+                            binding.progressImport.visibility = View.VISIBLE
+                            binding.tvImportStatus.visibility = View.GONE
+                            
+                            // Run import in coroutine
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    importData()
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        val errorMessage = ErrorHandler.handleException(this@BackupRestoreActivity, e)
+                                        showImportMessage(errorMessage, false)
+                                    }
+                                } finally {
+                                    withContext(Dispatchers.Main) {
+                                        binding.progressImport.visibility = View.GONE
+                                    }
+                                }
                             }
                         }
-                    }.start()
+                    )
                 }
-            )
+            }
         }
     }
     
@@ -167,21 +179,33 @@ class BackupRestoreActivity : AppCompatActivity() {
             // Convert transactions to JSON
             val jsonArray = JSONArray()
             transactions.forEach { transaction ->
-                val jsonObject = JSONObject().apply {
-                    put("id", transaction.id)
-                    put("title", transaction.title)
-                    put("amount", transaction.amount)
-                    put("category", transaction.category)
-                    put("date", dateFormat.format(transaction.date))
-                    put("isIncome", transaction.isIncome)
+                try {
+                    val jsonObject = JSONObject().apply {
+                        put("id", transaction.id)
+                        put("title", transaction.title)
+                        put("amount", transaction.amount)
+                        put("category", transaction.category)
+                        put("date", dateFormat.format(transaction.date))
+                        put("isIncome", transaction.isIncome)
+                    }
+                    jsonArray.put(jsonObject)
+                } catch (e: Exception) {
+                    ErrorHandler.logError("BackupRestoreActivity", "Error converting transaction to JSON", e)
+                    // Continue with other transactions even if one fails
                 }
-                jsonArray.put(jsonObject)
+            }
+            
+            if (jsonArray.length() == 0) {
+                throw IOException(getString(R.string.no_transactions_to_export))
             }
             
             // Always use the same file name for simplicity
             val file = File(filesDir, backupFileName)
             
             try {
+                // Ensure the parent directory exists
+                file.parentFile?.mkdirs()
+                
                 // Write to file in internal storage with proper error handling
                 FileOutputStream(file).use { outputStream ->
                     outputStream.write(jsonArray.toString().toByteArray())
@@ -203,25 +227,30 @@ class BackupRestoreActivity : AppCompatActivity() {
     }
     
     private fun getLatestBackupFile(): File? {
-        // First try the exact file name
-        val exactFile = File(filesDir, backupFileName)
-        if (exactFile.exists() && exactFile.isFile && exactFile.length() > 0) {
-            return exactFile
-        }
-        
-        // If not found, try to find any backup file
-        val backupFiles = filesDir.listFiles { file -> 
-            file.isFile && file.name.contains("boss_finance_backup") && file.name.endsWith(".json") 
-        } ?: return null
-        
-        return if (backupFiles.isNotEmpty()) {
-            backupFiles.maxByOrNull { it.lastModified() }
-        } else {
-            null
+        try {
+            // First try the exact file name
+            val exactFile = File(filesDir, backupFileName)
+            if (exactFile.exists() && exactFile.isFile && exactFile.length() > 0) {
+                return exactFile
+            }
+            
+            // If not found, try to find any backup file
+            val backupFiles = filesDir.listFiles { file -> 
+                file.isFile && file.name.contains("boss_finance_backup") && file.name.endsWith(".json") 
+            } ?: return null
+            
+            return if (backupFiles.isNotEmpty()) {
+                backupFiles.maxByOrNull { it.lastModified() }
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            ErrorHandler.logError("BackupRestoreActivity", "Error finding backup file", e)
+            return null
         }
     }
     
-    private fun importData() {
+    private suspend fun importData() {
         try {
             // Find the backup file
             val backupFile = getLatestBackupFile()
@@ -251,6 +280,9 @@ class BackupRestoreActivity : AppCompatActivity() {
             if (jsonArray.length() == 0) {
                 throw IOException(getString(R.string.no_transactions_in_backup))
             }
+            
+            // Log details for debugging
+            println("Found ${jsonArray.length()} transactions in backup file")
             
             // Convert JSON to transactions
             val transactions = mutableListOf<Transaction>()
@@ -316,14 +348,22 @@ class BackupRestoreActivity : AppCompatActivity() {
                         false
                     }
                     
-                    val transaction = Transaction(
-                        id = id,
-                        title = title,
-                        amount = amount,
-                        category = category,
-                        date = date,
-                        isIncome = isIncome
-                    )
+                    // Create the transaction with appropriate error checks for model compatibility
+                    val transaction = try {
+                        Transaction(
+                            id = id,
+                            title = title,
+                            amount = amount,
+                            category = category,
+                            date = date,
+                            isIncome = isIncome
+                        )
+                    } catch (e: Exception) {
+                        ErrorHandler.logError("BackupRestoreActivity", "Error creating Transaction object", e)
+                        parseErrors++
+                        continue // Skip if model construction fails
+                    }
+                    
                     transactions.add(transaction)
                 } catch (e: Exception) {
                     // Log the error but continue processing other transactions
@@ -341,11 +381,24 @@ class BackupRestoreActivity : AppCompatActivity() {
                 throw IOException(getString(R.string.no_valid_transactions_in_backup))
             }
             
+            println("Successfully parsed ${transactions.size} transactions from backup")
+            
             // Clear existing transactions and add imported ones
-            transactionRepository.replaceAllTransactions(transactions)
+            val importSuccess = transactionRepository.replaceAllTransactions(transactions)
+            
+            if (!importSuccess) {
+                throw IOException(getString(R.string.import_error, "Failed to update database"))
+            }
+            
+            // Reset the repository singleton to ensure fresh data
+            withContext(Dispatchers.Main) {
+                // Force repository to refresh by recreating the instance
+                TransactionRepository.clearInstance()
+                transactionRepository = TransactionRepository.getInstance(applicationContext)
+            }
             
             // Show success message on UI thread
-            runOnUiThread {
+            withContext(Dispatchers.Main) {
                 val message = if (parseErrors > 0) {
                     getString(R.string.import_partial_success, transactions.size, parseErrors)
                 } else {

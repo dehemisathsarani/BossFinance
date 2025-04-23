@@ -103,6 +103,8 @@
     <string name="import_partial_success">Imported %1$d transactions successfully. %2$d transactions were skipped due to errors.</string>
     <string name="share_backup">Share Backup File</string>
     <string name="share_error">Failed to share backup file</string>
+    <string name="backup_status_found">Last backup: %1$s</string>
+    <string name="backup_status_not_found">No backup found. Create one by clicking "Export Data".</string>
     
     <!-- Notifications Strings -->
     <string name="notifications_settings">Notifications</string>
